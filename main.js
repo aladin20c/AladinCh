@@ -1,4 +1,4 @@
-document.body.style.background = 'gray';
+document.body.style.background = '#f7f7f2';
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext("2d");
 
@@ -469,8 +469,6 @@ function worldUpdate(ctx){
   layer3.update(camera);
   layer3.draw(ctx,camera);
 
-
-  ctx.fillText('x :'+Math.floor(camera.x),70,70);
 }
 
 
@@ -491,7 +489,6 @@ function animate(){
   guitar.draw(ctx,camera);
 
   player.draw(ctx,camera);
-  camera.draw(ctx);
 
   porte02.draw(ctx,camera);
   porte04.draw(ctx,camera);
