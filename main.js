@@ -39,7 +39,7 @@ canvas.addEventListener("touchstart", (event) => {
 });
 
 canvas.addEventListener("touchend", (event) => {
-  rigthTouch = false;
+  rightTouch = false;
   leftTouch = false;
 });
 
@@ -86,14 +86,14 @@ class Player {
 
 
   update(){
-
+    console.log(rightTouch);
     if( (keys.get('ArrowRight') && !keys.get('ArrowLeft')) || (rightTouch && !leftTouch) ){
 
       this.facingRight=true;
       this.velocityX+=5;
       if(this.velocityX>MAX_RUNNING_VELOCITY) {this.velocityX=MAX_RUNNING_VELOCITY;}
 
-    }else if(  (keys.get('ArrowLeft') && !keys.get('ArrowRight'))||(!rightTouch && leftTouch) ){
+    }else if(  (keys.get('ArrowLeft') && !keys.get('ArrowRight'))|| (!rightTouch && leftTouch) ){
 
       this.facingRight=false;
       this.velocityX-=5;
