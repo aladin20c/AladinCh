@@ -309,7 +309,7 @@ camera = new Camera();
 
 
 
-
+player.y = 300;
 
 
 /*Layers*/
