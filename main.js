@@ -86,7 +86,6 @@ class Player {
 
 
   update(){
-    console.log(rightTouch);
     if( (keys.get('ArrowRight') && !keys.get('ArrowLeft')) || (rightTouch && !leftTouch) ){
 
       this.facingRight=true;
@@ -194,7 +193,6 @@ class Player {
 }
 player = new Player();
 player.initialiseAnimations();
-console.log(player);
 
 
 
