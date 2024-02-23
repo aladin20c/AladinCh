@@ -1,4 +1,4 @@
-document.body.style.background = '#f7f7f2';
+/*Canvas*/
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext("2d");
 
@@ -7,24 +7,21 @@ const CANVAS_HEIGHT = canvas.height = 650;
 const GROUND = 892;
 const GRAVITY = 0.7;
 
-//____________Controls
-/*contains the name of a key and a boolean to determine if it's pressed or not*/
-const keys = new Map();
 
+/*Keyboard Controls*/
+const keys = new Map();
 window.addEventListener('keydown', (event) => {
   keys.set(event.key, true);
 });
 window.addEventListener('keyup', (event) => {
   keys.set(event.key, false);
 });
-//_______________________
 
 
-
+/*Smarthphone touchScreen controls
+if smn touches the left part of the screen than the player goes left and if the roght side is touched than the player goes right*/
 var rightTouch = false;
 var leftTouch = false;
-
-
 
 canvas.addEventListener("touchstart", (event) => {
    var width = document.body.clientWidth;
@@ -45,7 +42,7 @@ canvas.addEventListener("touchend", (event) => {
 
 
 
-
+/*player class*/
 const IDLE = 0;
 const RUNNING = 1;
 const JUMPING = 2;
@@ -196,13 +193,17 @@ player.initialiseAnimations();
 
 
 
+
+
+
+/*Camera class*/
 const LOOK_AHEAD_IDLE=200;
 const LOOK_AHEAD_MOVING=200;
 const LOOK_UP=30;
 const LOOK_DOWN=50;
 const LERP_SPEEDX=0.075;
-const LERP_SPEEDJUMP=0.001;
-const LERP_SPEEDFALL=0.001;
+const LERP_SPEEDJUMP=0;
+const LERP_SPEEDFALL=0;
 
 class Camera {
 
@@ -295,7 +296,7 @@ class Camera {
   }
 
   vibrate(){
-    this.x += Math.floor(Math.random()*9)-4;
+    this.x += Math.floor(Math.random()*15)-7;
     //this.y +=  (Math.floor(Math.random()*3)-1)/2;
   }
 
@@ -308,8 +309,8 @@ camera = new Camera();
 
 
 
+player.y = 200;
 
-player.y = 300;
 
 
 /*Layers*/
@@ -318,9 +319,7 @@ var layer1= new ParallexLayer("layer1",0.2,0.2);
 var layer2= new ParallexLayer("layer2",0.3,0.3);
 var layer3= new ParallexLayer("layer3",0.97,1);
 
-
-
-/*first section*/
+/*introduction section*/
 var porte01 = new Sprite('porte01',760,555);
 var porte02 = new Sprite('porte02',760+131,555);
 var left = new SpriteShow('left',2000,450,  200,450 + 64 + 3,0.08);
@@ -328,35 +327,30 @@ var up = new SpriteShow('up',2000,450,   200 + 64 + 3 ,450,0.07);
 var down = new SpriteShow('down',2000,450,   200 + 64 + 3,450 + 64 + 3,0.06);
 var right = new SpriteShow('right',2000,450,  200 + 128 + 2*3,450 + 64 + 3 ,0.05);
 
-
-/*second section*/
+/*Paris section*/
 const b1 = new Banner(1510,400,'Live and Study in Paris');
 var arc = new SpriteShow('arc',1500,1000,  1500,690,0.1);
 var eiffle = new SpriteShow('eiffle',1700,1500,  1700,540,0.06);
 var notre_dame = new SpriteShow('notre_dame',1850,2500,  1850,640,0.05);
 
-/*third section*/
+/*Polytech section*/
 const b2 = new Banner(2850,400,'Software Engineering student at Polytech-Saclay');
 var polytech = new SpriteShow('polytech',2600,700, 2600,410,0.015);
 
-/*foruth section*/
+/*Guitar section*/
 const b3 = new Banner(3850,400,'guitar player');
 const guitar = new Sprite('player',3900,740);//::::::
-
 const music = new SpriteShowAnimation('music',4110,640,4110,640,1,100,100,10,4);
 
 
 var porte03 = new Sprite('porte01',4800,555);
 var porte04 = new Sprite('porte02',4800+131,555);
 
-/*fifth section*/
+/*Experience section*/
 
 var satellite = new SpriteShowAnimation('satellite',6000,0,6000,400,0.03,300,300,10,8);
 var paris_cite = new SpriteShow('paris_cite',7245,0,7245,400,0.03);
 var gameBoy = new SpriteShowAnimation('gameBoy',8500,0,8500,400,0.03, 183,300,10,4);
-
-
-
 
 
 
@@ -471,6 +465,10 @@ function worldUpdate(ctx){
     paris_cite.draw(ctx,camera);
   }
 
+  if(camera.x>3750 && camera.x<5050){
+    porte03.draw(ctx,camera);
+  }
+
   if(camera.x>6950 && camera.x<8800){//4th section guitar
     if(camera.x>7500 ){
       gameBoy.activate();
@@ -479,9 +477,6 @@ function worldUpdate(ctx){
     gameBoy.update();
     gameBoy.draw(ctx,camera);
   }
-
-
-  porte03.draw(ctx,camera);
 
 
   layer3.update(camera);
@@ -495,14 +490,11 @@ function worldUpdate(ctx){
 
 /************************************************/
 function animate(){
-  //ctx.fillStyle='white';
-  //ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
   player.update();
   camera.update(player);
 
   worldUpdate(ctx);
-
 
   guitar.draw(ctx,camera);
 

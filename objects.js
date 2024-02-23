@@ -12,7 +12,6 @@ class Sprite{
   }
 
 
-
   update(camera){}
 
 
@@ -23,6 +22,7 @@ class Sprite{
 }
 
 
+/*to do fix*/
 class ParallexSprite extends Sprite{
 
   constructor(imageId,x,y,speedModifierX,speedModifierY ){
@@ -40,7 +40,7 @@ class ParallexSprite extends Sprite{
 
 
 
-
+/*draw continuous background between beginX and EndX (It is RECOMMENDED that they are both multiples of the width)*/
 class FiniteLayer extends Sprite{
 
   constructor(imageId,beginX,endX,y){
@@ -52,9 +52,10 @@ class FiniteLayer extends Sprite{
 
   draw(ctx,camera){
 
+    /*camera is out of bonds [beginX, endX]*/
     if( (camera.x >= this.endX) || (camera.x+camera.width <= this.beginX) ){return;}
 
-
+    /*camera is in bonds [beginX, endX]*/
     if((camera.x < this.endX) && (camera.x >= this.beginX)){
       var posX = (camera.x - this.beginX)%this.width;
 
