@@ -473,7 +473,7 @@ function worldUpdate(ctx){
     if(camera.x>7500 ){
       gameBoy.activate();
     }
-    Banner.drawBanner(8000,400,'August 2022, Finland','University of Turku','Game Design & Game development summer school');
+    Banner.drawBanner(8000,400,'August 2023, Finland','University of Turku','Game Design & Game development summer school');
     gameBoy.update();
     gameBoy.draw(ctx,camera);
   }
