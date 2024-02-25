@@ -179,7 +179,8 @@ class Player {
 
   initialiseAnimations(){
     this.state = IDLE;
-    this.image=document.getElementById('character');
+    this.image=new Image();
+    this.image.src='./sprite2.png'
     this.spritewidth = 110;
     this.spriteHeight = 175;
     this.frame = 0;

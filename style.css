@@ -2,6 +2,18 @@ body{
   background-color: #f7f7f2 ;
 }
 
+#note{
+  font-family: sans-serif;
+  color: #de4770;
+  font-size: 12px; /* Little font size */
+  padding: 10px; /* Padding around the note */
+  animation: cssAnimation 0s 5s forwards;
+  opacity: 1;
+}
+
+@keyframes cssAnimation {
+  to   { opacity: 0; }
+}
 
 *{
   margin : 0;
@@ -21,4 +33,4 @@ canvas {
     transform: translate(-50%,-50%);
     max-width: 100%;
     max-height: 100%;
-} 
+}

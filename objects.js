@@ -304,8 +304,11 @@ class SpriteShowAnimation extends SpriteShow {
   }
 }
 
+//const ad = document.getElementById('ad');
+const ad = new Image(498,50);
+ad.src = 'ad.png';
 
-const ad = document.getElementById('ad');
+
 class Banner{
   constructor(x,y,text){
     this.x=x;
