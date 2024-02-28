@@ -4,7 +4,7 @@ body{
 
 #note{
   font-family: sans-serif;
-  color: #c2ffd2;
+  color: #595958;
   font-size: 12px; /* Little font size */
   padding: 10px; /* Padding around the note */
   animation: cssAnimation 0s 5s forwards;
