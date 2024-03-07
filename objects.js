@@ -352,7 +352,7 @@ class Banner{
     ctx.fillText(text1,x-camera.x+20, y-camera.y+60);
     ctx.font='bold 30px Trebuchet MS';
     ctx.fillText(text2,x-camera.x+20, y-camera.y+120);
-    ctx.font='19px Times New Roman';
+    ctx.font='17px Times New Roman';
     ctx.fillText(text3,x-camera.x+20, y-camera.y+170);
     if(text4!=null){
         ctx.fillText(text4,x-camera.x+20, y-camera.y+200);
