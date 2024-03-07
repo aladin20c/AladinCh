@@ -375,7 +375,6 @@ function worldUpdate(ctx){
 
 
   if(camera.x<1020){//first section
-
     //buttons
     if(!up.visible){
       up.activate();
@@ -398,6 +397,8 @@ function worldUpdate(ctx){
       ctx.font='30px Times New Roman';
       ctx.fillText('press arrows to scroll through my resume',70-camera.x,620-camera.y);
     }
+    ctx.font='20px Times New Roman';
+    ctx.fillText('refresh the page the first time you log in',10-camera.x,400-camera.y);
     //first part of door
     porte01.draw(ctx,camera);
 
