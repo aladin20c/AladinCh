@@ -485,7 +485,7 @@ function worldUpdate(ctx){
   }
 
   if(camera.x>8800){
-        Banner.drawBanner(9350,400,'2024-2025, Orsay','Polytech Paris Saclay','Student tutor for first year student at polytech Paris Saclay','in Mathematics, Physics and computer science');
+        Banner.drawBanner(10700,400,'2024-2025, Orsay','Polytech Paris Saclay','Student tutor for first year student at polytech Paris Saclay','in Mathematics, Physics and computer science');
     }
 
 
