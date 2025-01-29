@@ -278,8 +278,8 @@ class Camera {
 
     if(lx<0) {
       lx=0;
-    }else if(lx+this.width > 9500){
-      lx = 9500 - this.width;
+    }else if(lx+this.width > 15000){
+      lx = 15000 - this.width;
     }
 
     if(ly + this.height>1024) ly=1024-this.height;
@@ -471,7 +471,7 @@ function worldUpdate(ctx){
     porte03.draw(ctx,camera);
   }
 
-  if(camera.x>6950 && camera.x<8800){//4th section guitar
+  if(camera.x>6950 && camera.x<8800){
     if(camera.x>7500 ){
       gameBoy.activate();
     }
@@ -479,6 +479,14 @@ function worldUpdate(ctx){
     gameBoy.update();
     gameBoy.draw(ctx,camera);
   }
+
+  if(camera.x>8000){
+      Banner.drawBanner(9350,400,'Summer 2024, Paris','SMA BTP','Software developing internship involving Front End Programming','in Angular and Back End programming in Spring Boot');
+  }
+
+  if(camera.x>8800){
+        Banner.drawBanner(9350,400,'2024-2025, Orsay','Polytech Paris Saclay','Student tutor for first year student at polytech Paris Saclay','in Mathematics, Physics and computer science');
+    }
 
 
   layer3.update(camera);
