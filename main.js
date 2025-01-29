@@ -353,7 +353,7 @@ var satellite = new SpriteShowAnimation('satellite',6000,0,6000,400,0.03,300,300
 var paris_cite = new SpriteShow('paris_cite',7245,0,7245,400,0.03);
 var gameBoy = new SpriteShowAnimation('gameBoy',8500,0,8500,400,0.03, 183,300,10,4);
 
-var smabtp = new SpriteShow('smabtp',9850,0,9850,400,0.03);
+var smabtp = new SpriteShow('smabtp',9850,100,9850,450,0.03);
 
 
 /*plus function*/
@@ -480,13 +480,16 @@ function worldUpdate(ctx){
     gameBoy.draw(ctx,camera);
   }
 
-  if(camera.x>8100 && camera.x<9000){
+  if(camera.x>8100 && camera.x<10050){
+      if(camera.x>8150 && !smabtp.visible){
+          smabtp.activate();
+      }
       Banner.drawBanner(9350,400,'Summer 2024, Paris','SMA BTP','Software developing internship involving Front End Programming','in Angular and Back End programming in Spring Boot');
       smabtp.update();
       smabtp.draw(ctx,camera);
   }
 
-  if(camera.x>8800 && camera.x<11100){
+  if(camera.x>8800 && camera.x<11200){
         Banner.drawBanner(10700,400,'2024-2025, Orsay','Polytech Paris Saclay','Student tutor for first year student at polytech Paris Saclay','in Mathematics, Physics and computer science');
   }
 
