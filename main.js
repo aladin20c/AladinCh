@@ -354,6 +354,7 @@ var paris_cite = new SpriteShow('paris_cite',7245,0,7245,400,0.03);
 var gameBoy = new SpriteShowAnimation('gameBoy',8500,0,8500,400,0.03, 183,300,10,4);
 
 var smabtp = new SpriteShow('smabtp',9850,100,9850,450,0.03);
+var polytechlogo = new SpriteShow('polytechlogo',11150,0,11150,450,0.03);
 
 
 /*plus function*/
@@ -481,7 +482,7 @@ function worldUpdate(ctx){
   }
 
   if(camera.x>8100 && camera.x<10050){
-      if(camera.x>8150 && !smabtp.visible){
+      if(camera.x>8350 && !smabtp.visible){
           smabtp.activate();
       }
       Banner.drawBanner(9350,400,'Summer 2024, Paris','SMA BTP','Software developing internship involving Front End Programming','in Angular and Back End programming in Spring Boot');
@@ -490,8 +491,15 @@ function worldUpdate(ctx){
   }
 
   if(camera.x>8800 && camera.x<11200){
+        if(camera.x>10000 && !polytechlogo.visible){
+            polytechlogo.activate();
+        }
         Banner.drawBanner(10700,400,'2024-2025, Orsay','Polytech Paris Saclay','Student tutor for first year student at polytech Paris Saclay','in Mathematics, Physics and computer science');
+        polytechlogo.update();
+        polytechlogo.draw(ctx,camera);
   }
+
+
 
 
   layer3.update(camera);
