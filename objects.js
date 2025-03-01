@@ -298,6 +298,15 @@ class SpriteShowAnimation extends SpriteShow {
     this.frame =0;
     this.staggerFrames = staggerFrames;
     this.animationFrmaes=animationFrmaes;
+
+    this.image.onload = () => {
+      this.width = w;
+      this.height = h;
+      this.isLoaded.resolve();
+    };
+
+
+
   }
 
 
