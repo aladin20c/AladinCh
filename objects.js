@@ -3,13 +3,30 @@ function lerp(a,b,t){return a+(b-a)*t;}
 
 class Sprite{
 
-  constructor(imageId,x,y){
-    this.image=document.getElementById(imageId);
-    this.x=x;
-    this.y=y;
-    this.width=this.image.width;
-    this.height=this.image.height;
+  constructor(imageId, x, y) {  
+    this.image = document.getElementById(imageId);
+    this.x = x;
+    this.y = y;
+
+    // Use a Promise to wait for the image to load
+    this.isLoaded = new Promise((resolve, reject) => {
+        if (this.image.complete && this.image.naturalWidth > 0) {
+            // Image is already loaded
+            this.width = this.image.width;
+            this.height = this.image.height;
+            resolve();
+        } else {
+            // Wait for the image to load
+            this.image.onload = () => {
+                this.width = this.image.width;
+                this.height = this.image.height;
+                resolve();
+            };
+            this.image.onerror = reject;
+        }
+    });
   }
+
 
 
   update(camera){}

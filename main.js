@@ -357,6 +357,8 @@ var smabtp = new SpriteShow('smabtp',9850,100,9850,450,0.03);
 var polytechlogo = new SpriteShow('polytechlogo',11150,0,11150,450,0.03);
 
 
+
+
 /*plus function*/
 var frames = 0;
 var variable1 = false;
@@ -532,4 +534,10 @@ function animate(){
   porte04.draw(ctx,camera);
   requestAnimationFrame (animate) ;
 };
+
+
+
+
+
 animate ();
+
