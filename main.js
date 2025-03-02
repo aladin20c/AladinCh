@@ -401,7 +401,7 @@ function worldUpdate(ctx){
       ctx.fillText('press arrows to scroll through my resume',70-camera.x,620-camera.y);
     }
     ctx.font='20px Times New Roman';
-    ctx.fillText('refresh the page the first time you log in',10-camera.x,400-camera.y);
+    ctx.fillText('If you\'re on your phone, press on either the left or right half of the game screen.',10-camera.x,400-camera.y);
     //first part of door
     porte01.draw(ctx,camera);
 
