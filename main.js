@@ -162,18 +162,41 @@ class Player {
 
 
 
-  draw(ctx,camera){
-    this.frame = (this.frame + 1)%210000;
-    var position = Math.floor(this.frame/this.staggerFrames) % this.animationStates[this.state];
+  draw(ctx, camera) {
+    this.frame = (this.frame + 1) % 210000;
+    var position = Math.floor(this.frame / this.staggerFrames) % this.animationStates[this.state];
     var frameX = this.spritewidth * position;
     var frameY = this.spriteHeight * this.state;
-    /*if(this.facingRight){
-      document.getElementById('character').classList.remove('flip');
-    }else{
-      document.getElementById('character').classList.add('flip');
-    }*/
-    ctx.drawImage(this.image, frameX, frameY, this.spritewidth, this.spriteHeight, this.x-camera.x, this.y-camera.y,this.spritewidth, this.spriteHeight);
-  }
+    
+    if (this.facingRight) {
+        ctx.drawImage(
+            this.image, 
+            frameX, frameY, 
+            this.spritewidth, this.spriteHeight, 
+            this.x - camera.x, this.y - camera.y,
+            this.spritewidth, this.spriteHeight
+        );
+    } else {
+        // Save the current context state
+        ctx.save();
+        
+        // Translate to the position where we want to draw, then scale horizontally
+        ctx.translate(this.x - camera.x + this.spritewidth, this.y - camera.y);
+        ctx.scale(-1, 1); // This flips the image horizontally
+        
+        // Draw the image at the translated position (x is now 0 because we translated)
+        ctx.drawImage(
+            this.image, 
+            frameX, frameY, 
+            this.spritewidth, this.spriteHeight, 
+            0, 0, // x and y are 0 because we already translated
+            this.spritewidth, this.spriteHeight
+        );
+        
+        // Restore the context to its original state
+        ctx.restore();
+    }
+}
 
 
 
