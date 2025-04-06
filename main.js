@@ -207,7 +207,7 @@ class Player {
     this.spritewidth = 110;
     this.spriteHeight = 175;
     this.frame = 0;
-    this.staggerFrames=10;
+    this.staggerFrames=8;
     this.animationStates = [4,4,4,4];
   }
 
