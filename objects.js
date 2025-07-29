@@ -33,7 +33,7 @@ class Sprite{
 
 
   draw(ctx,camera=null){
-    if(camera==null) {tx.drawImage (this.image, this.x,  this.y);}
+    if(camera==null) {ctx.drawImage (this.image, this.x,  this.y);}
     else {ctx.drawImage(this.image, this.x-camera.x, this.y-camera.y, this.width, this.height);}
   }
 }
@@ -304,11 +304,7 @@ class SpriteShowAnimation extends SpriteShow {
       this.height = h;
       this.isLoaded.resolve();
     };
-
-
-
   }
-
 
   update(camera=null){
     if(this.active){
