@@ -1,74 +1,20 @@
 /*preparation*/
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext("2d");
-canvas.width = Game.canvasWidth;
-canvas.height = Game.canvasHeight;
+canvas.width = CANVAS_WIDTH;
+canvas.height = CANVAS_HEIGHT;
 
+const layer0 = new ParallaxLayer("layer0",new Vector(0,0),0,0.1,0.1,true,false);
+const layer1 = new ParallaxLayer("layer1",new Vector(0,540),1,0.2,0.2,true,false);
+const layer2 = new ParallaxLayer("layer2",new Vector(0,670),2,0.3,0.3,true,false);
+//const layer3 = new ParallaxLayer("layer3",new Vector(0,890),4,0.4,0.4,true,false);
 
-loadImages();
-setUpControls();
-loadObjects();
-
-Game.camera = new Camera(new AABB(new Vector(0, 0), new Vector(Game.canvasWidth, Game.canvasHeight)));
-const bg = new ParallaxLayer("eiffle", 0, 300,1, 0.5, 0.5, true, false);
-const hey = new Sprite("eiffle",20,20,1);
-class Player {
-
-  constructor() {
-    this.width = 110;
-    this.height = 175;
-    this.pos = new Vector(100,100);
-  }
-
-
-  draw(ctx, camera = null) {
-    ctx.fillStyle = '#c9fffd';
-    if (camera == null) {
-      ctx.fillRect(this.pos.x, this.pos.y, this.width, this.height);
-    } else {
-      ctx.fillRect(this.pos.x - camera.shape.position.x, this.pos.y - camera.shape.position.y, this.width, this.height);
-    }
-  }
-
-
-  update() {
-    if (Game.keys.get('ArrowLeft') && !Game.keys.get('ArrowRight')) {
-
-      this.pos.x -= 10;
-
-    }
-
-    if (Game.keys.get('ArrowRight') && !Game.keys.get('ArrowLeft')) {
-
-      this.pos.x += 10;
-
-    }
-
-    if (Game.keys.get('ArrowUp') && !Game.keys.get('ArrowDown')) {
-
-      this.pos.y -= 10;
-
-    }
-    if (Game.keys.get('ArrowDown') && !Game.keys.get('ArrowUp')) {
-
-      this.pos.y += 10;
-
-    }
-  }
-}
-const p = new Player();
-Game.camera.setTarget(p.pos);
 
 
 
 function animate(){
-  ctx.clearRect(0, 0, Game.canvasWidth, Game.canvasHeight);
-  bg.draw(ctx,Game.camera);
-  p.update();
-  Game.camera.update();
-  p.draw(ctx,Game.camera);
-
-
+  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  gameLoop();
   requestAnimationFrame (animate) ;
 }
 
