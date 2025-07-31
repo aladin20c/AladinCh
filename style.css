@@ -1,6 +1,8 @@
 body{
-  background-color: #f7f7eb ;
+  background-color: #f7f7f2 ;
 }
+
+
 
 *{
   margin : 0;
@@ -14,7 +16,6 @@ img {
 }
 
 canvas {
-    background-color: #e8e8e8 ;
     position: absolute;
     top: 50%;
     left: 50%;
