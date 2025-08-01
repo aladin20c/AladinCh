@@ -4,21 +4,38 @@ const ctx = canvas.getContext("2d");
 canvas.width = CANVAS_WIDTH;
 canvas.height = CANVAS_HEIGHT;
 
-const layer0 = new ParallaxLayer("layer0",new Vector(0,0),0,0.1,0.1,true,false);
-const layer1 = new ParallaxLayer("layer1",new Vector(0,540),1,0.2,0.2,true,false);
-const layer2 = new ParallaxLayer("layer2",new Vector(0,670),2,0.3,0.3,true,false);
-//const layer3 = new ParallaxLayer("layer3",new Vector(0,890),4,0.4,0.4,true,false);
 
+let lastTime = performance.now();
+let fps = 0;
+let frameCount = 0;
+let fpsTimer = 0;
 
+function animate(timestamp = performance.now()) {
+  const deltaTime = timestamp - lastTime;
+  lastTime = timestamp;
 
+  // Count frames
+  frameCount++;
+  fpsTimer += deltaTime;
 
-function animate(){
+  // Update FPS every second
+  if (fpsTimer >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    fpsTimer = 0;
+  }
+
+  // Clear canvas and draw game
   ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   gameLoop();
-  requestAnimationFrame (animate) ;
+
+  // Draw FPS (optional)
+  ctx.fillStyle = 'black';
+  ctx.font = '16px monospace';
+  ctx.fillText(`FPS: ${fps}`, 10, 20);
+
+  requestAnimationFrame(animate);
 }
-
-
 
 
 

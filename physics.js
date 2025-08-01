@@ -1,15 +1,14 @@
 //--------------------------------------------------------------
 //Global Variable
 //--------------------------------------------------------------
-var IMAGES_LOADED = false;
-const  IMAGE_MAP = new Map();
+let IMAGES_LOADED = false;
+const IMAGE_MAP = new Map();
 const KEYS = new Map();
-const    CANVAS_WIDTH = 1024;
-const    CANVAS_HEIGHT = 650;
-const    GRAVITY=0.7;
-
+const CANVAS_WIDTH = 1024;
+const CANVAS_HEIGHT = 650;
+const GRAVITY=0.7;
 const ALL_OBJECTS = [];
-var VISIBLE_OBJECTS = [];
+let VISIBLE_OBJECTS = [];
 
 function getImage(imageId){
     if(IMAGES_LOADED){
@@ -20,6 +19,7 @@ function getImage(imageId){
     console.warn(`Images not loaded yet`);
     return null;
 }
+
 function setUpControls(){
     window.addEventListener('keydown', (event) => {
         KEYS.set(event.key, true);
@@ -28,6 +28,7 @@ function setUpControls(){
         KEYS.set(event.key, false);
     });
 }
+
 function loadImages() {
     const container = document.getElementById('images');
     if (!container) {
@@ -228,10 +229,6 @@ class AABB {
         this.height = height;
     }
 
-    setPosition(position){
-        this.position.set(position);
-    }
-
     translate(vec) {
         this.position.add(vec);
     }
@@ -243,6 +240,15 @@ class AABB {
             this.position.x + this.width > other.position.x &&
             this.position.y < other.position.y + other.height &&
             this.position.y + this.height > other.position.y
+        );
+    }
+
+    intersectsRaw(x, y, w, h) {
+        return (
+            this.position.x < x + w &&
+            this.position.x + this.width > x &&
+            this.position.y < y + h &&
+            this.position.y + this.height > y
         );
     }
 
@@ -273,7 +279,7 @@ class AABB {
 
         // Create resolution vector
         const resolution = new Vector();
-        
+
         if (minPen === penLeft) {
             resolution.x = -penLeft;
         } else if (minPen === penRight) {
@@ -375,7 +381,6 @@ class Sprite extends Pea {
         ctx.drawImage(this.image, drawX, drawY, this.shape.width, this.shape.height);
     }
 
-
     intersectsWithCamera(camera) {
         camera.shape.intersects(this.shape);
     }
@@ -439,8 +444,6 @@ class ParallaxLayer extends Sprite {
 class SpriteAnimation extends Sprite {
     constructor(imageId, position, zIndex, frameWidth, frameHeight, staggerFrames = 5) {
         super(imageId, position, zIndex);
-        this.shape.width = frameWidth;
-        this.shape.height = frameHeight;
 
         this.frameWidth = frameWidth;
         this.frameHeight = frameHeight;
@@ -502,7 +505,7 @@ class SpriteAnimation extends Sprite {
     }
 
     intersectsWithCamera(camera) {
-        camera.shape.intersects(this.shape);
+        camera.shape.intersectsRaw(this.position.x,this.position.y,this.frameWidth,this.frameHeight);
     }
 }
 
@@ -519,7 +522,7 @@ class Player {
         this.velocity = new Vector(0, 0);
 
         //sprite
-        this.sprite = new SpriteAnimation("sprite", this.shape.position, this.zIndex, 110, 175, 8);
+        this.sprite = new SpriteAnimation("sprite", this.shape.position, this.zIndex, 110, 175, 4);
         this.sprite.addState("idle", 0, 4);
         this.sprite.addState("running", 1, 4);
         this.sprite.addState("jumping", 2, 4);
@@ -528,10 +531,10 @@ class Player {
 
         //other
         this.facingRight = true;
-        this.maxRunningVelocity = 10;
+        this.maxRunningVelocity = 15;
 
         this.onGround = false;
-        this.maxFallVelocity = 20;
+        this.maxFallVelocity = 30;
 
         //jump
         this.jumpTimer = 0;
@@ -577,7 +580,7 @@ class Player {
             this.velocity.x -= 1;
             if (this.velocity.x < -this.maxRunningVelocity) this.velocity.x = -this.maxRunningVelocity;
         } else {
-            this.velocity.x *= 0.5;
+            this.velocity.x *= 0.4;
             if (Math.abs(this.velocity.x) < 0.2) this.velocity.x = 0;
         }
 
@@ -877,7 +880,7 @@ function buildWorld(){
 
     var satellite = new SpriteShowAnimation('satellite',6000,0,6000,400,0.03,300,300,10,8);
     var paris_cite = new SpriteShow('paris_cite',7245,0,7245,400,0.03);
-    var gameBoy = new SpriteShowAnimation('gameBoy',8500,0,8500,400,0.03, 183,300,10,4);
+    var gameB = new SpriteShowAnimation('gameB',8500,0,8500,400,0.03, 183,300,10,4);
 
     var smabtp = new SpriteShow('smabtp',9850,100,9850,450,0.03);
     var polytechlogo = new SpriteShow('polytechlogo',11150,0,11150,450,0.03);*/
@@ -896,7 +899,7 @@ function gameLoop() {
     }
 
     // Sort by zIndex ascending (lower zIndex = drawn first)
-    VISIBLE_OBJECTS.sort((a, b) => a.zIndex - b.zIndex);
+    //VISIBLE_OBJECTS.sort((a, b) => a.zIndex - b.zIndex);
 
     // --- UPDATE ---
     for (const obj of VISIBLE_OBJECTS) {
@@ -915,7 +918,6 @@ function gameLoop() {
     for (const obj of VISIBLE_OBJECTS) {
         if (obj.zIndex > PLAYER.zIndex) obj.draw(ctx, CAMERA);
     }
-
 }
 
 buildWorld();
@@ -934,7 +936,7 @@ class Banner{
         this.offX = 0;
 
         ctx.font = this.font;
-        var m=ctx.measureText(this.text).width;
+        let m=ctx.measureText(this.text).width;
 
         if(m<(ad.width-20)){
             this.offX = (ad.width - m)* 0.5;
