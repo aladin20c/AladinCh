@@ -26,7 +26,6 @@ function animate(timestamp = performance.now()) {
   }
 
   // Clear canvas and draw game
-  ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
   gameLoop();
 
   // Draw FPS (optional)
@@ -38,8 +37,14 @@ function animate(timestamp = performance.now()) {
 }
 
 
+setUpControls();
+loadImages().then(()=>{
+  console.log('images are loaded');
+  buildWorld();
+  removeLoadingScreen();
+  animate();
+});
 
-animate ();
 
 
 

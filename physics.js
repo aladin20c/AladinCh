@@ -7,8 +7,14 @@ const KEYS = new Map();
 const CANVAS_WIDTH = 1024;
 const CANVAS_HEIGHT = 650;
 const GRAVITY=0.7;
-const ALL_OBJECTS = [];
-let VISIBLE_OBJECTS = [];
+
+const DRAW_OBJECTS = [];
+const UPDATE_OBJECTS = [];
+const COLLISION_OBJECTS = [];
+
+let PLAYER = null;
+let CAMERA = null;
+const PLAYER_INDEX = 10;
 
 function getImage(imageId){
     if(IMAGES_LOADED){
@@ -20,63 +26,10 @@ function getImage(imageId){
     return null;
 }
 
-function setUpControls(){
-    window.addEventListener('keydown', (event) => {
-        KEYS.set(event.key, true);
-    });
-    window.addEventListener('keyup', (event) => {
-        KEYS.set(event.key, false);
-    });
-}
-
-function loadImages() {
-    const container = document.getElementById('images');
-    if (!container) {
-        console.warn(`Container with ID "images" not found.`);
-        return;
-    }
-    const images = container.querySelectorAll('img[id]');
-    let loadedCount = 0;
-    const totalImages = images.length;
-    if (totalImages === 0) {
-        IMAGES_LOADED = true;
-        return;
-    }
-
-    images.forEach(img => {
-        const id = img.id;
-        IMAGE_MAP.set(id, img);
-
-        if (img.complete && img.naturalWidth !== 0) {
-            // Already loaded
-            loadedCount++;
-            if (loadedCount === totalImages) {
-                IMAGES_LOADED = true;
-            }
-        } else {
-            img.addEventListener('load', () => {
-                loadedCount++;
-                if (loadedCount === totalImages) {
-                    IMAGES_LOADED = true;
-                }
-            });
-            img.addEventListener('error', () => {
-                console.warn(`Failed to load image with ID "${id}"`);
-                loadedCount++;
-                if (loadedCount === totalImages) {
-                    IMAGES_LOADED = true;
-                }
-            });
-        }
-    });
-}
-
-
 
 //--------------------------------------------------------------
 // Vector Class
 //--------------------------------------------------------------
-
 class Vector {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -216,6 +169,10 @@ class Vector {
     perpendicular() {
         return new Vector(-this.y, this.x);
     }
+
+    manhattanDistance(other) {
+        return Math.abs(this.x - other.x) + Math.abs(this.y - other.y);
+    }
 }
 
 
@@ -223,17 +180,24 @@ class Vector {
 //AABB class
 //--------------------------------------------------------------
 class AABB {
-    constructor(position = new Vector(), width, height) {
-        this.position = position;
-        this.width = width;
-        this.height = height;
+    constructor(a, b, c, d) {
+        if (a instanceof Vector) {
+            // Form: new AABB(position, width, height)
+            this.position = a;
+            this.width = b;
+            this.height = c;
+        } else {
+            // Form: new AABB(x, y, width, height)
+            this.position = new Vector(a, b);
+            this.width = c;
+            this.height = d;
+        }
     }
 
     translate(vec) {
         this.position.add(vec);
     }
 
-    // Check if this AABB intersects with another AABB
     intersects(other) {
         return (
             this.position.x < other.position.x + other.width &&
@@ -252,7 +216,6 @@ class AABB {
         );
     }
 
-    // Check if this AABB completely contains another AABB
     contains(other) {
         return (
             this.position.x <= other.position.x &&
@@ -302,7 +265,6 @@ class AABB {
         );
     }
 
-    // Check if a point is inside the AABB
     containsPoint(point) {
         return (
             point.x >= this.position.x &&
@@ -319,23 +281,31 @@ class AABB {
 //--------------------------------------------------------------
 class Pea {
 
-    constructor() {
-        this.children = [];
+    constructor(position = new Vector(),zIndexDraw,zIndexCollision) {
+        this.position = position;
+        this.zIndexDraw = zIndexDraw;
+        this.zIndexCollision = zIndexCollision;
+        this.children = null;
     }
 
     update() {
-        for (const child of this.children) {
-            child.update();
+        if (this.children) {
+            for (const child of this.children) {
+                child.update();
+            }
         }
     }
 
     draw(ctx, camera) {
-        for (const child of this.children) {
-            child.draw(ctx, camera);
+        if (this.children) {
+            for (const child of this.children) {
+                child.draw(ctx, camera);
+            }
         }
     }
 
     add(peas) {
+        if (this.children===null) this.children = [];
         if (Array.isArray(peas)) {
             this.children.push(...peas);
         } else {
@@ -344,52 +314,58 @@ class Pea {
     }
 
     remove(peas) {
-        if (!Array.isArray(peas)) peas = [peas];
-        this.children = this.children.filter(child => !peas.includes(child));
+        if (this.children) {
+            if (!Array.isArray(peas)) peas = [peas];
+            this.children = this.children.filter(child => !peas.includes(child));
+        }
     }
 
     clear() {
-        this.children.length = 0;
+        if (this.children) {
+            this.children.length = 0;
+        }
     }
 
     intersectsWithCamera(camera) {
-        return false;
+        return camera.shape.containsPoint(this.position);
     }
 }
-
-
 
 
 //--------------------------------------------------------------
 //Sprites
 //--------------------------------------------------------------
 class Sprite extends Pea {
-    constructor(imageId, position = new Vector(), zIndex) {
-        super();
+    constructor(imageId, position = new Vector(), zIndexDraw,zIndexCollision) {
+        super(position,zIndexDraw,zIndexCollision);
         this.image = getImage(imageId);
-        this.zIndex = zIndex;
         this.position = position;
-        this.shape = new AABB(this.position,this.image.width,this.image.height);
+        this.width = this.image.width;
+        this.height = this.image.height;
     }
 
     update() {}
 
-    draw(ctx, camera = null){
-        if (!this.image) return;
-        const drawX = camera ? this.position.x - camera.shape.position.x : this.position.x;
-        const drawY = camera ? this.position.y - camera.shape.position.y : this.position.y;
-        ctx.drawImage(this.image, drawX, drawY, this.shape.width, this.shape.height);
+    draw(ctx, camera){
+        if (!this.image || !camera.shape.intersectsRaw(this.position.x,this.position.y,this.width,this.height)) return;
+        ctx.drawImage(
+            this.image,
+            this.position.x - camera.position.x,
+            this.position.y - camera.position.y ,
+            this.width,
+            this.height
+        );
     }
 
     intersectsWithCamera(camera) {
-        camera.shape.intersects(this.shape);
+        return camera.shape.intersectsRaw(this.position.x,this.position.y,this.width,this.height);
     }
 }
 
 
 class ParallaxLayer extends Sprite {
-    constructor(imageId, position, zIndex, speedModifierX = 1, speedModifierY = 1, repeatX = true, repeatY = true) {
-        super(imageId, position, zIndex);
+    constructor(imageId, position, zIndexDraw,zIndexCollision, speedModifierX = 1, speedModifierY = 1, repeatX = true, repeatY = true) {
+        super(imageId, position, zIndexDraw,zIndexCollision);
         this.speedModifierX = speedModifierX;
         this.speedModifierY = speedModifierY;
         this.repeatX = repeatX;
@@ -398,13 +374,11 @@ class ParallaxLayer extends Sprite {
 
     update() {}
 
-    draw(ctx, camera = null) {
+    draw(ctx, camera ) {
         if (!this.image || !camera) return;
 
-        const camPos = camera.shape.position;
-
-        const offsetX = camPos.x * this.speedModifierX;
-        const offsetY = camPos.y * this.speedModifierY;
+        const offsetX = camera.position.x * this.speedModifierX;
+        const offsetY = camera.position.y * this.speedModifierY;
 
         // Anchor-based parallax position
         const baseX = this.position.x - offsetX;
@@ -412,25 +386,25 @@ class ParallaxLayer extends Sprite {
 
         if (!this.repeatX && !this.repeatY) {
             // No tiling at all — draw single image
-            ctx.drawImage(this.image, baseX, baseY, this.shape.width, this.shape.height);
+            ctx.drawImage(this.image, baseX, baseY, this.width, this.height);
             return;
         }
 
         // Compute tiling start aligned to anchor tile
         const startX = this.repeatX
-            ? baseX % this.shape.width - this.shape.width
+            ? baseX % this.width - this.width
             : baseX;
 
         const startY = this.repeatY
-            ? baseY % this.shape.height - this.shape.height
+            ? baseY % this.height - this.height
             : baseY;
 
-        const endX = this.repeatX ? camera.shape.width + this.shape.width : baseX + 1;
-        const endY = this.repeatY ? camera.shape.height + this.shape.height : baseY + 1;
+        const endX = this.repeatX ? camera.shape.width + this.width : baseX + 1;
+        const endY = this.repeatY ? camera.shape.height + this.height : baseY + 1;
 
-        for (let y = startY; y < endY; y += this.shape.height) {
-            for (let x = startX; x < endX; x += this.shape.width) {
-                ctx.drawImage(this.image, x, y, this.shape.width, this.shape.height);
+        for (let y = startY; y < endY; y += this.height) {
+            for (let x = startX; x < endX; x += this.width) {
+                ctx.drawImage(this.image, x, y, this.width, this.height);
             }
         }
     }
@@ -442,8 +416,8 @@ class ParallaxLayer extends Sprite {
 
 
 class SpriteAnimation extends Sprite {
-    constructor(imageId, position, zIndex, frameWidth, frameHeight, staggerFrames = 5) {
-        super(imageId, position, zIndex);
+    constructor(imageId, position, zIndexDraw,zIndexCollision, frameWidth, frameHeight, staggerFrames = 5) {
+        super(imageId, position, zIndexDraw,zIndexCollision);
 
         this.frameWidth = frameWidth;
         this.frameHeight = frameHeight;
@@ -485,21 +459,18 @@ class SpriteAnimation extends Sprite {
         }
     }
 
-    draw(ctx, camera = null) {
-        if (!this.image || !this.currentState) return;
+    draw(ctx, camera ) {
+        if (!this.image || !this.currentState || !camera.shape.intersectsRaw(this.position.x,this.position.y,this.frameWidth,this.frameHeight)) return;
 
         const state = this.states[this.currentState];
-        const sx = this.currentFrame * this.frameWidth;
-        const sy = state.row * this.frameHeight;
-
-        const drawX = camera ? this.position.x - camera.shape.position.x : this.position.x;
-        const drawY = camera ? this.position.y - camera.shape.position.y : this.position.y;
 
         ctx.drawImage(
             this.image,
-            sx, sy,
+            this.currentFrame * this.frameWidth, //sx
+            state.row * this.frameHeight, //sy
             this.frameWidth, this.frameHeight,
-            drawX, drawY,
+            this.position.x - camera.position.x,  //drawX
+            this.position.y - camera.position.y, //drawY
             this.frameWidth, this.frameHeight
         );
     }
@@ -516,13 +487,15 @@ class SpriteAnimation extends Sprite {
 //--------------------------------------------------------------
 class Player {
     constructor() {
-        this.shape = new AABB(new Vector(10, 400), 110, 175);
+        this.position = new Vector(10, 400);
+        this.shape = new AABB(this.position.clone().add(30,15), 65, 160);
         this.cameraTarget = this.shape.getCenter();
-        this.zIndex = 10;
+        this.zIndexDraw = PLAYER_INDEX;
+        this.zIndexCollision = PLAYER_INDEX;
         this.velocity = new Vector(0, 0);
 
         //sprite
-        this.sprite = new SpriteAnimation("sprite", this.shape.position, this.zIndex, 110, 175, 4);
+        this.sprite = new SpriteAnimation("sprite", this.position, this.zIndexDraw,this.zIndexDraw, 110, 175, 4);
         this.sprite.addState("idle", 0, 4);
         this.sprite.addState("running", 1, 4);
         this.sprite.addState("jumping", 2, 4);
@@ -543,25 +516,20 @@ class Player {
         this.jumpSpeed = -10; // initial jump impulse per frame
     }
 
-    draw(ctx, camera = null) {
-        if (!this.sprite) {
-            ctx.fillStyle = '#c9fffd';
-            const drawX = camera ? this.shape.position.x - camera.position.x : this.shape.position.x;
-            const drawY = camera ? this.shape.position.y - camera.position.y : this.shape.position.y;
-            ctx.fillRect(drawX, drawY, this.shape.width, this.shape.height);
-        } else {
-            this.sprite.update();
-            this.sprite.draw(ctx, camera);
-        }
+    draw(ctx, camera ) {
+        this.sprite.update();
+        this.sprite.draw(ctx, camera);
+        //ctx.fillRect(this.shape.position.x-camera.position.x,this.shape.position.y-camera.position.y,this.shape.width,this.shape.height);
     }
 
     translate(vector){
+        this.position.add(vector);
         this.shape.translate(vector);
         this.cameraTarget.add(vector);
     }
 
 
-    update(objectSet) {
+    update() {
         const keysPressed = {
             left: KEYS.get('ArrowLeft'),
             right: KEYS.get('ArrowRight'),
@@ -621,8 +589,8 @@ class Player {
         this.onGround = false;
 
 
-        for (const object of VISIBLE_OBJECTS) {
-            if (object.zIndex === this.zIndex) {
+        for (const object of COLLISION_OBJECTS) {
+            if (object.zIndexCollision === this.zIndexCollision) {
                 const resolution = this.shape.getCollisionResolution(object.shape);
                 if (resolution) {
                     this.translate(resolution);
@@ -679,15 +647,17 @@ class Player {
 //--------------------------------------------------------------
 class Camera {
     constructor() {
-        this.shape = new AABB(new Vector(0,0),CANVAS_WIDTH, CANVAS_HEIGHT);
-        this.target = new Vector();
+        this.position = new Vector(0,0);
+        this.shape = new AABB(this.position,CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        this.target = null;
         this.followSpeedX = 0.1; // 0 = no follow, 1 = instant snap
         this.followSpeedY = 0.1; // 0 = no follow, 1 = instant snap
         this.easingFunctionX = (t) => t; // Default: linear easing
         this.easingFunctionY = (t) => t; // Default: linear easing
         this.followX = true;
         this.followY = true;
-        this.bounds = {minX:-10000,minY:-10000,maxX:10000,maxY:10000};
+        this.bounds = null; //{minX:-10000,minY:-10000,maxX:10000,maxY:10000};
     }
 
 
@@ -702,32 +672,30 @@ class Camera {
     setBounds(bounds) {this.bounds = bounds;}
 
 
-    intersectsObject(object) {
-        if (object.shape) return this.shape.intersects(object.shape);
-        return false;
-    }
 
     update() {
-        if (this.target) {
-            const targetX = this.target.x - this.shape.width / 2;
-            const targetY = this.target.y - this.shape.height / 2;
-            const easeX = this.easingFunctionX(this.followSpeedX);
-            const easeY = this.easingFunctionY(this.followSpeedY);
-            if (this.followX) {
-                this.shape.position.x += (targetX - this.shape.position.x) * easeX;
-            }
-            if (this.followY) {
-                this.shape.position.y += (targetY - this.shape.position.y) * easeY;
-            }
+        if (!this.target) return;
+        const targetX = this.target.x - this.shape.width / 2;
+        const targetY = this.target.y - this.shape.height / 2;
+        const easeX = this.easingFunctionX(this.followSpeedX);
+        const easeY = this.easingFunctionY(this.followSpeedY);
+
+        if (this.followX) {
+            this.position.x += (targetX - this.position.x) * easeX;
+        }
+        if (this.followY) {
+            this.position.y += (targetY - this.position.y) * easeY;
+        }
 
             if (this.bounds) {
-                this.shape.position.set(
+                this.position.set(
                     Math.max(this.bounds.minX, Math.min(this.bounds.maxX - this.shape.width, this.shape.position.x)),
                     Math.max(this.bounds.minY, Math.min(this.bounds.maxY - this.shape.height, this.shape.position.y))
                 );
             }
-        }
     }
+
+
 }
 
 
@@ -738,24 +706,26 @@ class Camera {
 
 
 class StaticObject extends Pea{
-    constructor(shape, zIndex) {
-        super();
+    constructor(position, zIndexDraw,zIndexCollision,shape = null) {
+        super(position, zIndexDraw,zIndexCollision);
         this.shape = shape;
-        this.zIndex = zIndex;
     }
 
+    setShape(shape){this.shape=shape;}
+
     intersectsWithCamera(camera) {
-        return camera.shape.intersects(this.shape);
+        if (this.shape){
+            return this.shape.intersects(camera.shape);
+        }
+        return false;
     }
 }
 
-
 class MovingObject extends StaticObject{
-    constructor(startPosition, endPosition, shape, zIndex , oscillate = false) {
-        super(shape,zIndex);
+    constructor(startPosition, endPosition, zIndexDraw,zIndexCollision , shape, oscillate = false) {
+        super(startPosition.clone(),zIndexDraw,zIndexCollision,shape);
         this.startPosition = startPosition;
         this.endPosition = endPosition;
-        this.shape.position.set(this.startPosition);
 
         this.oscillate = oscillate;
         this.easingFunction = (t) => t;
@@ -766,6 +736,10 @@ class MovingObject extends StaticObject{
 
     setEasing(fn) {
         this.easingFunction = fn;
+    }
+
+    setDuration(duration){
+        this.duration = duration;
     }
 
     update() {
@@ -789,7 +763,7 @@ class MovingObject extends StaticObject{
         const from = this.forward ? this.startPosition : this.endPosition;
         const to = this.forward ? this.endPosition : this.startPosition;
 
-        this.shape.position.set(from.x + (to.x - from.x) * ease, from.y + (to.y - from.y) * ease);
+        this.position.set(from.x + (to.x - from.x) * ease, from.y + (to.y - from.y) * ease);
         super.update();
     }
 
@@ -798,66 +772,147 @@ class MovingObject extends StaticObject{
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
+function removeLoadingScreen() {
+    const screen = document.getElementById('loading-screen');
+    if (screen) {
+        screen.style.opacity = '0';
+        setTimeout(() => screen.remove(), 400);
+    }
+}
 
+function setUpControls(){
+    console.log('setting up controls ...');
+    window.addEventListener('keydown', (event) => {
+        KEYS.set(event.key, true);
+    });
+    window.addEventListener('keyup', (event) => {
+        KEYS.set(event.key, false);
+    });
+}
 
+function loadImages() {
+    console.log('loading images ...');
+    return new Promise((resolve) => {
+        const container = document.getElementById('images');
+        if (!container) {
+            console.warn(`Container with ID "images" not found.`);
+            resolve(); // Resolve anyway, so buildWorld can continue
+            return;
+        }
 
-loadImages();
-setUpControls();
-const PLAYER = new Player();
-const CAMERA = new Camera();
-CAMERA.setTarget(PLAYER.cameraTarget);
+        const images = container.querySelectorAll('img[id]');
+        const totalImages = images.length;
+        if (totalImages === 0) {
+            IMAGES_LOADED = true;
+            resolve();
+            return;
+        }
+
+        let loadedCount = 0;
+
+        const checkAllLoaded = () => {
+            loadedCount++;
+            if (loadedCount === totalImages) {
+                IMAGES_LOADED = true;
+                resolve();
+            }
+        };
+
+        images.forEach(img => {
+            const id = img.id;
+            IMAGE_MAP.set(id, img);
+
+            if (img.complete && img.naturalWidth !== 0) {
+                // Already loaded
+                checkAllLoaded();
+            } else {
+                img.addEventListener('load', checkAllLoaded);
+                img.addEventListener('error', () => {
+                    console.warn(`Failed to load image with ID "${id}"`);
+                    checkAllLoaded();
+                });
+            }
+        });
+    });
+}
+
+function buildArrows(){
+
+    const delta = 80;
+
+    const arrows = ['left','down','right','up'];
+    const endPos = [new Vector(200 ,900),new Vector(200 + delta,900 ),new Vector(200 + 2 * delta,900 ),new Vector(200 + delta,900 - delta)];
+    const startPos = [new Vector(2000 ,600),new Vector(3000 + delta,900 ),new Vector(4000,700 ),new Vector(3000 ,400)];
+    const duration =[2,2.5,3,2];
+    for (let i = 0; i < arrows.length;i++){
+        const ar = new MovingObject(
+            startPos[i],
+            endPos[i],
+            PLAYER_INDEX,PLAYER_INDEX, null, false);
+        ar.setShape(new AABB(ar.position,64,64));
+        const arSprite = new Sprite(arrows[i],ar.position,PLAYER_INDEX+1,PLAYER_INDEX+1);
+        ar.add(arSprite);
+
+        //t => (1 - Math.exp(-10 * t)) / (1 - Math.exp(-10))
+        ar.setEasing((t => 1 - Math.exp(-6 * t)));
+        ar.setDuration(duration[i]);
+
+        DRAW_OBJECTS.push(arSprite);
+        UPDATE_OBJECTS.push(ar);
+        COLLISION_OBJECTS.push(ar);
+    }
+}
 
 
 function buildWorld(){
-    const layer0 = new ParallaxLayer("layer0",new Vector(0,-200),0,0.1,0.1,true,false);
-    const layer1 = new ParallaxLayer("layer1",new Vector(0,390),1,0.2,0.2,true,false);
-    const layer2 = new ParallaxLayer("layer2",new Vector(0,510),2,0.3,0.3,true,false);
-    const tile1 = new StaticObject(new AABB(new Vector(0, 1000),512,128) ,PLAYER.zIndex);
-    tile1.add(
-        new Sprite("tile1",tile1.shape.position,PLAYER.zIndex-1)
-    );
+    console.log('building world ...');
 
-    ALL_OBJECTS.push(layer0);
-    ALL_OBJECTS.push(layer1);
-    ALL_OBJECTS.push(layer2);
+    PLAYER = new Player();
+    CAMERA = new Camera();
+    CAMERA.setTarget(PLAYER.cameraTarget);
+    CAMERA.setBounds({minX:-100,minY:410,maxX:50000,maxY:1130});
 
-    ALL_OBJECTS.push(tile1);
+    const layer0 = new ParallaxLayer("layer0",new Vector(0,-200),0,0,0.1,0.1,true,false);
+    const layer1 = new ParallaxLayer("layer1",new Vector(0,390),1,1,0.2,0.2,true,false);
+    const layer2 = new ParallaxLayer("layer2",new Vector(0,510),2,2,0.3,0.3,true,false);
+    const layer3 = new ParallaxLayer("layer3",new Vector(0,1000),3,3,1,1,true,false);
+    DRAW_OBJECTS.push(layer0);
+    DRAW_OBJECTS.push(layer1);
+    DRAW_OBJECTS.push(layer2);
+    DRAW_OBJECTS.push(layer3);
+
+
+
+    const ground = new StaticObject(new Vector(-1000,1000),PLAYER_INDEX+1,PLAYER_INDEX,null);
+    ground.setShape(new AABB(ground.position,50000,500));
+    COLLISION_OBJECTS.push(ground);
+    buildArrows();
+
+
+    const porte = new StaticObject(new Vector(700,664),PLAYER_INDEX,PLAYER_INDEX,null);
+    porte.setShape(new AABB(porte.position.clone().add(107,35)  ,47,90));
+    const portSprite1 = new Sprite('porte01',porte.position,PLAYER_INDEX-1,PLAYER_INDEX-1);
+    const portSprite2 = new Sprite('porte02',porte.position.clone().add(130,0),PLAYER_INDEX+1,PLAYER_INDEX+1);
+    porte.add(portSprite1);
+    porte.add(portSprite2);
+
+
+    COLLISION_OBJECTS.push(porte);
+    DRAW_OBJECTS.push(portSprite1);
+    DRAW_OBJECTS.push(portSprite2);
+
+
     /*
-    var porte01 = new Sprite('porte01',760,555);
-    var porte02 = new Sprite('porte02',760+131,555);
-    var left = new SpriteShow('left',2000,450,  200,450 + 64 + 3,0.08);
-    var up = new SpriteShow('up',2000,450,   200 + 64 + 3 ,450,0.07);
-    var down = new SpriteShow('down',2000,450,   200 + 64 + 3,450 + 64 + 3,0.06);
-    var right = new SpriteShow('right',2000,450,  200 + 128 + 2*3,450 + 64 + 3 ,0.05);
-
     const b1 = new Banner(1510,400,'Live and Study in Paris');
     var arc = new SpriteShow('arc',1500,1000,  1500,690,0.1);
     var eiffle = new SpriteShow('eiffle',1700,1500,  1700,540,0.06);
@@ -885,24 +940,20 @@ function buildWorld(){
     var smabtp = new SpriteShow('smabtp',9850,100,9850,450,0.03);
     var polytechlogo = new SpriteShow('polytechlogo',11150,0,11150,450,0.03);*/
 
+
+
+    // Sort by zIndex ascending (lower zIndex = drawn first)
+    DRAW_OBJECTS.sort((a, b) => a.zIndexDraw - b.zIndexDraw);
+    COLLISION_OBJECTS.sort((a, b) => a.zIndexCollision - b.zIndexCollision);
+    UPDATE_OBJECTS.sort((a, b) => a.zIndexCollision - b.zIndexCollision);
+
 }
 
 
 
 function gameLoop() {
-    VISIBLE_OBJECTS = [];
-
-    for (const obj of ALL_OBJECTS) {
-        if (obj.intersectsWithCamera(CAMERA)) {
-            VISIBLE_OBJECTS.push(obj);
-        }
-    }
-
-    // Sort by zIndex ascending (lower zIndex = drawn first)
-    //VISIBLE_OBJECTS.sort((a, b) => a.zIndex - b.zIndex);
-
     // --- UPDATE ---
-    for (const obj of VISIBLE_OBJECTS) {
+    for (const obj of UPDATE_OBJECTS) {
         obj.update();
     }
     PLAYER.update();
@@ -910,22 +961,50 @@ function gameLoop() {
 
     // --- RENDER ---
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    for (const obj of VISIBLE_OBJECTS) {
-        if (obj.zIndex <= PLAYER.zIndex) obj.draw(ctx, CAMERA);
+    for (const obj of DRAW_OBJECTS) {
+        if (obj.zIndexDraw <= PLAYER.zIndexDraw) obj.draw(ctx, CAMERA);
     }
     PLAYER.draw(ctx, CAMERA);
-    for (const obj of VISIBLE_OBJECTS) {
-        if (obj.zIndex > PLAYER.zIndex) obj.draw(ctx, CAMERA);
+    for (const obj of DRAW_OBJECTS) {
+        if (obj.zIndexDraw > PLAYER.zIndexDraw) obj.draw(ctx, CAMERA);
     }
+
 }
 
-buildWorld();
-//--------------------------------------------------------------------------
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 class Banner{
     constructor(x,y,text){
         this.x=x;
@@ -979,3 +1058,4 @@ class Banner{
 
 
 }
+*/
