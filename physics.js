@@ -481,7 +481,75 @@ class SpriteAnimation extends Sprite {
 }
 
 
+class Banner extends Pea{
+    constructor( position = new Vector(), zIndexDraw,zIndexCollision,
+                 {
+                     text = 'Banner',
+                     font = 'Times New Roman',
+                     fontSize = 20,
+                     textColor = '#FFFFFF',
+                     backgroundColor = '#DC2521',
+                     offX = 100,
+                     offY = 5,
+                     staggerFrames = 0
+                 } = {}) {
 
+        super(position,zIndexDraw,zIndexCollision);
+        this.text = text;
+        this.font = font;
+        this.fontSize = fontSize;
+        this.textColor = textColor;
+        this.backgroundColor = backgroundColor;
+        this.offX = offX;
+        this.offY = offY;
+
+        this.width = 0;
+        this.height = 0;
+        this.updateWidthHeight();
+
+        this.staggerFrames = staggerFrames;
+        this.frameCounter = 0;
+        this.visible = true;
+    }
+
+    updateWidthHeight() {
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.font = `${this.fontSize}px ${this.font}`;
+
+        this.width = tempCtx.measureText(this.text).width + this.offX * 2;
+        this.height = this.fontSize + this.offY * 2;
+    }
+
+
+    update() {
+        if (this.staggerFrames > 0) {
+            this.frameCounter++;
+            if (this.frameCounter >= this.staggerFrames) {
+                this.visible = !this.visible;
+                this.frameCounter = 0;
+            }
+        }
+    }
+
+    draw(ctx, camera) {
+        if (!this.visible || !camera.shape.intersectsRaw(this.position.x,this.position.y,this.width,this.height)) return;
+
+        ctx.save();
+
+        if (this.backgroundColor) {
+            ctx.fillStyle = this.backgroundColor;
+            ctx.fillRect(this.position.x - camera.position.x, this.position.y - camera.position.y, this.width, this.height);
+        }
+
+        ctx.fillStyle = this.textColor;
+        ctx.font = `${this.fontSize}px ${this.font}`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(this.text, this.position.x + this.offX - camera.position.x, this.position.y + this.offY - camera.position.y);
+
+        ctx.restore();
+    }
+}
 //--------------------------------------------------------------
 //Player class
 //--------------------------------------------------------------
@@ -489,7 +557,7 @@ class Player {
     constructor() {
         this.position = new Vector(10, 400);
         this.shape = new AABB(this.position.clone().add(30,15), 65, 160);
-        this.cameraTarget = this.shape.getCenter();
+        this.cameraTarget = this.shape.getCenter().add(100,0);
         this.zIndexDraw = PLAYER_INDEX;
         this.zIndexCollision = PLAYER_INDEX;
         this.velocity = new Vector(0, 0);
@@ -671,7 +739,10 @@ class Camera {
     setFollowSpeedY(speed) {this.followSpeedY = Math.max(0, Math.min(1, speed));}
     setBounds(bounds) {this.bounds = bounds;}
 
-
+    shake(){
+        this.position.add( Math.floor(Math.random()*15)-7,0);
+        //this.y +=  (Math.floor(Math.random()*3)-1)/2;
+    }
 
     update() {
         if (!this.target) return;
@@ -722,7 +793,7 @@ class StaticObject extends Pea{
 }
 
 class MovingObject extends StaticObject{
-    constructor(startPosition, endPosition, zIndexDraw,zIndexCollision , shape, oscillate = false) {
+    constructor(startPosition, endPosition, zIndexDraw,zIndexCollision , shape = null, oscillate = false) {
         super(startPosition.clone(),zIndexDraw,zIndexCollision,shape);
         this.startPosition = startPosition;
         this.endPosition = endPosition;
@@ -732,6 +803,12 @@ class MovingObject extends StaticObject{
         this.duration = 1.5;
         this.time = 0;
         this.forward = true;
+
+        this.active = false;
+    }
+
+    setActive(active){
+        this.active = active;
     }
 
     setEasing(fn) {
@@ -742,7 +819,27 @@ class MovingObject extends StaticObject{
         this.duration = duration;
     }
 
+    shouldActivate() {
+        // Default condition: always activate
+        return true;
+    }
+
+    isDone(){
+        return !this.oscillate && this.time >= this.duration;
+    }
+
     update() {
+
+        if (!this.active) {
+            if (this.isDone()) return;
+            if (this.shouldActivate()) {
+                this.setActive(true);
+            } else {
+                return;
+            }
+        }
+
+
         const delta = 1 / 60; // assuming 60 FPS
         this.time += delta;
 
@@ -755,6 +852,7 @@ class MovingObject extends StaticObject{
                 t = 0;
             } else {
                 t = 1;
+                this.setActive(false);
             }
         }
 
@@ -769,19 +867,34 @@ class MovingObject extends StaticObject{
 
 }
 
+class TriggerZone extends StaticObject{
+    constructor(position, zIndexDraw,zIndexCollision,shape) {
+        super(position, zIndexDraw,zIndexCollision,shape);
+    }
+
+    trigger(){
+        //if (this.shape) return this.shape.intersects(player.shape);
+        return true;
+    };
+
+    triggerFunction(){}
+
+    update() {
+        if (this.trigger()){
+            this.triggerFunction();
+        }
+        super.update();
+    }
+
+}
 
 
 
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
-//-----------------------------------------------------------------------
+
+
+//--------------------------------------------------------------
+//--------------------------------------------------------------
+//--------------------------------------------------------------
 function removeLoadingScreen() {
     const screen = document.getElementById('loading-screen');
     if (screen) {
@@ -846,6 +959,9 @@ function loadImages() {
     });
 }
 
+
+
+
 function buildArrows(){
 
     const delta = 80;
@@ -885,7 +1001,7 @@ function buildWorld(){
     const layer0 = new ParallaxLayer("layer0",new Vector(0,-200),0,0,0.1,0.1,true,false);
     const layer1 = new ParallaxLayer("layer1",new Vector(0,390),1,1,0.2,0.2,true,false);
     const layer2 = new ParallaxLayer("layer2",new Vector(0,510),2,2,0.3,0.3,true,false);
-    const layer3 = new ParallaxLayer("layer3",new Vector(0,1000),3,3,1,1,true,false);
+    const layer3 = new ParallaxLayer("layer3",new Vector(0,1000),PLAYER_INDEX+5,PLAYER_INDEX+5,1,1,true,false);
     DRAW_OBJECTS.push(layer0);
     DRAW_OBJECTS.push(layer1);
     DRAW_OBJECTS.push(layer2);
@@ -898,48 +1014,164 @@ function buildWorld(){
     COLLISION_OBJECTS.push(ground);
     buildArrows();
 
-
+    //building Door
     const porte = new StaticObject(new Vector(700,664),PLAYER_INDEX,PLAYER_INDEX,null);
     porte.setShape(new AABB(porte.position.clone().add(107,35)  ,47,90));
     const portSprite1 = new Sprite('porte01',porte.position,PLAYER_INDEX-1,PLAYER_INDEX-1);
     const portSprite2 = new Sprite('porte02',porte.position.clone().add(130,0),PLAYER_INDEX+1,PLAYER_INDEX+1);
     porte.add(portSprite1);
     porte.add(portSprite2);
-
-
     COLLISION_OBJECTS.push(porte);
     DRAW_OBJECTS.push(portSprite1);
     DRAW_OBJECTS.push(portSprite2);
 
 
-    /*
-    const b1 = new Banner(1510,400,'Live and Study in Paris');
-    var arc = new SpriteShow('arc',1500,1000,  1500,690,0.1);
-    var eiffle = new SpriteShow('eiffle',1700,1500,  1700,540,0.06);
-    var notre_dame = new SpriteShow('notre_dame',1850,2500,  1850,640,0.05);
+    //building Arc
+    const arc = new MovingObject(new Vector(1500,1000), new Vector(1500,800), PLAYER_INDEX+1, PLAYER_INDEX+1);
+    const arcSprite = new Sprite('arc',arc.position,PLAYER_INDEX+1, PLAYER_INDEX+1);
+    arc.add(arcSprite);
+    arc.shouldActivate = function() {
+        return arc.endPosition.manhattanDistance(PLAYER.position) < 500;
+    };
+    arc.setDuration(0.5);
+    arc.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    UPDATE_OBJECTS.push(arc);
+    DRAW_OBJECTS.push(arcSprite);
 
 
-    const b2 = new Banner(2850,400,'Software Engineering student at Polytech-Saclay');
-    var polytech = new SpriteShow('polytech',2600,700, 2600,410,0.015);
+    //building Eiffel
+
+    const eiffel = new MovingObject(new Vector(1710,1000), new Vector(1710,650), PLAYER_INDEX-1, PLAYER_INDEX-1);
+    const eiffelSprite = new Sprite('eiffel',eiffel.position,PLAYER_INDEX-1, PLAYER_INDEX-1);
+    eiffel.add(eiffelSprite);
+    eiffel.setDuration(0.5);
+    eiffel.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    eiffel.shouldActivate = function() {
+        return arc.isDone()  ;
+    };
+    UPDATE_OBJECTS.push(eiffel);
+    DRAW_OBJECTS.push(eiffelSprite);
+
+    //notre dame
+    const notre_dame = new MovingObject(new Vector(1855,1000), new Vector(1855,750), PLAYER_INDEX-1, PLAYER_INDEX-1);
+    const notre_dameSprite = new Sprite('notre_dame',notre_dame.position,PLAYER_INDEX-1, PLAYER_INDEX-1);
+    notre_dame.add(notre_dameSprite);
+    notre_dame.setDuration(0.5);
+    notre_dame.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    notre_dame.shouldActivate = function() {
+        return eiffel.isDone()  ;
+    };
+    UPDATE_OBJECTS.push(notre_dame);
+    DRAW_OBJECTS.push(notre_dameSprite);
 
 
-    const b3 = new Banner(3850,400,'guitar player');
-    const guitar = new Sprite('player',3900,740);//::::::
-    const music = new SpriteShowAnimation('music',4110,640,4110,640,1,100,100,10,4);
 
 
-    var porte03 = new Sprite('porte01',4800,555);
-    var porte04 = new Sprite('porte02',4800+131,555);
+    //building Polytech
+    const polytech = new MovingObject(new Vector(2500,1000), new Vector(2500,520), PLAYER_INDEX-1, PLAYER_INDEX-1);
+    const polytechSprite = new Sprite('polytech_building',polytech.position,PLAYER_INDEX-1, PLAYER_INDEX-1);
+    polytech.add(polytechSprite);
+    polytech.shouldActivate = function() {
+        return polytech.endPosition.manhattanDistance(PLAYER.position) < 400;
+    };
+    polytech.setDuration(4);
+    polytech.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    UPDATE_OBJECTS.push(polytech);
+    DRAW_OBJECTS.push(polytechSprite);
+
+    const guitar_player = new Sprite('guitar_player',new Vector(3900,851),PLAYER_INDEX-3, PLAYER_INDEX-3);
+    DRAW_OBJECTS.push(guitar_player);
+    const music_animation = new SpriteAnimation('music_animation', new Vector(4050,751), PLAYER_INDEX-1,PLAYER_INDEX-1, 100, 100,  6);
+    music_animation.addState("animation", 0, 4);
+    music_animation.setState("animation");
+    UPDATE_OBJECTS.push(music_animation);
+    DRAW_OBJECTS.push(music_animation);
+
+
+    const banner0 = new Banner( new Vector(90,600),PLAYER_INDEX-2,PLAYER_INDEX-2,
+        {
+        text: 'Press arrows to scroll through my resume',
+        textColor : '#000000',
+        fontSize: 28,
+        backgroundColor: null,
+        offX:20,
+        offY:10,
+        staggerFrames: 40
+    });
+
+    UPDATE_OBJECTS.push(banner0);
+    DRAW_OBJECTS.push(banner0);
 
 
 
-    var satellite = new SpriteShowAnimation('satellite',6000,0,6000,400,0.03,300,300,10,8);
-    var paris_cite = new SpriteShow('paris_cite',7245,0,7245,400,0.03);
-    var gameB = new SpriteShowAnimation('gameB',8500,0,8500,400,0.03, 183,300,10,4);
+    const bannerParis = new Banner( new Vector(1590,530),PLAYER_INDEX-2,PLAYER_INDEX-2,
+        {
+            text: 'Live and study in Paris',
+        });
 
-    var smabtp = new SpriteShow('smabtp',9850,100,9850,450,0.03);
-    var polytechlogo = new SpriteShow('polytechlogo',11150,0,11150,450,0.03);*/
+    DRAW_OBJECTS.push(bannerParis);
 
+
+
+    const bannerStudy = new Banner( new Vector(2800,530),PLAYER_INDEX-2,PLAYER_INDEX-2,
+        {
+            text: 'Software Engineering Student At Polytech Paris Saclay',
+        });
+    DRAW_OBJECTS.push(bannerStudy);
+
+
+    const bannerMusic = new Banner( new Vector(3870,530),PLAYER_INDEX-2,PLAYER_INDEX-2,
+        {
+            text: 'Guitar player',
+        });
+    DRAW_OBJECTS.push(bannerMusic);
+
+
+    const trigger1 = new TriggerZone(new Vector(2100,500),PLAYER_INDEX,PLAYER_INDEX,null,null);
+    trigger1.setShape(new AABB(trigger1.position,400,1000));
+    trigger1.trigger = function () {
+        return polytech.active;
+    };
+    trigger1.triggerFunction = function () {
+        CAMERA.shake();
+    };
+    UPDATE_OBJECTS.push(trigger1);
+
+
+
+
+    const porte2 = new StaticObject(new Vector(4500,664),PLAYER_INDEX,PLAYER_INDEX,null);
+    porte2.setShape(new AABB(porte2.position.clone().add(107,35)  ,47,90));
+    const porte2Sprite1 = new Sprite('porte01',porte2.position,PLAYER_INDEX-1,PLAYER_INDEX-1);
+    const porte2Sprite2 = new Sprite('porte02',porte2.position.clone().add(130,0),PLAYER_INDEX+1,PLAYER_INDEX+1);
+    porte2.add(portSprite1);
+    porte2.add(portSprite2);
+    COLLISION_OBJECTS.push(porte2);
+    DRAW_OBJECTS.push(porte2Sprite1);
+    DRAW_OBJECTS.push(porte2Sprite2);
+
+    const satellite = new MovingObject(new Vector(6000,200), new Vector(6000,520), PLAYER_INDEX-1, PLAYER_INDEX-1);
+    const satelliteSprite = new SpriteAnimation('satellite', satellite.position, PLAYER_INDEX-1,PLAYER_INDEX-1, 150, 150,  6);
+    satelliteSprite.addState("animation", 0, 8);
+    satelliteSprite.setState("animation");
+    satellite.add(satelliteSprite);
+    satellite.setDuration(2);
+
+    satellite.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    satellite.shouldActivate = function() {
+        return satellite.endPosition.manhattanDistance(PLAYER.position) < 500;
+    };
+    UPDATE_OBJECTS.push(satellite);
+    UPDATE_OBJECTS.push(satelliteSprite);
+    DRAW_OBJECTS.push(satelliteSprite);
+
+
+        /*
+        var paris_cite = new SpriteShow('paris_cite',7245,0,7245,400,0.03);
+        var gameB = new SpriteShowAnimation('gameB',8500,0,8500,400,0.03, 183,300,10,4);
+        var smabtp = new SpriteShow('smabtp',9850,100,9850,450,0.03);
+        var polytechlogo = new SpriteShow('polytechlogo',11150,0,11150,450,0.03);
+        */
 
 
     // Sort by zIndex ascending (lower zIndex = drawn first)
@@ -971,91 +1203,3 @@ function gameLoop() {
 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-class Banner{
-    constructor(x,y,text){
-        this.x=x;
-        this.y=y;
-        this.text=text;
-        this.font='25px Times New Roman';
-        this.color = 'white';
-        this.offX = 0;
-
-        ctx.font = this.font;
-        let m=ctx.measureText(this.text).width;
-
-        if(m<(ad.width-20)){
-            this.offX = (ad.width - m)* 0.5;
-        }else{
-            this.font='20px Times New Roman';
-            ctx.font = this.font;
-            m=ctx.measureText(this.text).width;
-            this.offX = (ad.width - m)* 0.5;
-        }
-
-    }
-
-    update(camera=null){}
-
-    draw(ctx,camera){
-        ctx.drawImage(ad,this.x-camera.x, this.y-camera.y);
-        ctx.fillStyle = this.color;
-        ctx.font = this.font;
-        ctx.fillText(this.text, this.x + this.offX - camera.x, this.y+25-camera.y);
-    }
-
-    static drawBanner(x,y,text1,text2,text3,text4 = null){
-        ctx.fillStyle = '#777777';
-        ctx.fillRect(x-camera.x-7,y-camera.y-7,526,270);
-        ctx.fillStyle = '#444444';
-        ctx.fillRect(x-camera.x,y-camera.y,512,256);
-
-        ctx.fillStyle = 'white';
-        ctx.font='bold 35px Georgia';
-        ctx.fillText(text1,x-camera.x+20, y-camera.y+60);
-        ctx.font='bold 30px Trebuchet MS';
-        ctx.fillText(text2,x-camera.x+20, y-camera.y+120);
-        ctx.font='17px Times New Roman';
-        ctx.fillText(text3,x-camera.x+20, y-camera.y+170);
-        if(text4!=null){
-            ctx.fillText(text4,x-camera.x+20, y-camera.y+200);
-        }
-
-    }
-
-
-}
-*/
