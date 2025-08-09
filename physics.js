@@ -23,6 +23,8 @@ const PLAYER_INDEX = 10;
 //easing functions
 //(t => t * t); // Ease-in (slow start)
 
+function powerEasingIn(pow,t){return Math.pow(t,pow);}
+
 //Linear
 function linearEasing(t){return t;}
 
@@ -1517,8 +1519,8 @@ function buildWorld(){
     const polytech_logoSprite = new Sprite('polytech_logo', polytech_logo.position, PLAYER_INDEX-1,PLAYER_INDEX-1);
     polytech_logo.setShape(new AABB(polytech_logo.position,polytech_logoSprite.width,polytech_logoSprite.height));
     polytech_logo.add(polytech_logoSprite);
-    polytech_logo.setDuration(2);
-    polytech_logo.setEasing(pow2Easing);
+    polytech_logo.setDuration(1);
+    polytech_logo.setEasing(t=> powerEasingIn(4,t));
     polytech_logo.shouldActivate = function() {
         return polytech_logo.endPosition.distanceTo2(PLAYER.position) < 490000;
     };
