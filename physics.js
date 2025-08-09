@@ -466,20 +466,41 @@ class SpriteAnimation extends Sprite {
         }
     }
 
-    draw(ctx, camera ) {
+    draw(ctx, camera ,options= null) {
         if (!this.image || !this.currentState || !camera.shape.intersectsRaw(this.position.x,this.position.y,this.frameWidth,this.frameHeight)) return;
 
         const state = this.states[this.currentState];
 
-        ctx.drawImage(
-            this.image,
-            this.currentFrame * this.frameWidth, //sx
-            state.row * this.frameHeight, //sy
-            this.frameWidth, this.frameHeight,
-            this.position.x - camera.position.x,  //drawX
-            this.position.y - camera.position.y, //drawY
-            this.frameWidth, this.frameHeight
-        );
+        if (options && options.flip) {
+            ctx.save();
+            ctx.translate(
+                this.position.x - camera.position.x + this.frameWidth,
+                this.position.y - camera.position.y
+            );
+            ctx.scale(-1, 1);
+            ctx.drawImage(
+                this.image,
+                this.currentFrame * this.frameWidth, // sx
+                state.row * this.frameHeight, // sy
+                this.frameWidth, this.frameHeight,
+                0,  // drawX (now relative to the translation)
+                0,  // drawY (now relative to the translation)
+                this.frameWidth, this.frameHeight
+            );
+            ctx.restore();
+        } else {
+            ctx.drawImage(
+                this.image,
+                this.currentFrame * this.frameWidth, // sx
+                state.row * this.frameHeight, // sy
+                this.frameWidth, this.frameHeight,
+                this.position.x - camera.position.x,  // drawX
+                this.position.y - camera.position.y, // drawY
+                this.frameWidth, this.frameHeight
+            );
+        }
+
+
     }
 
 }
@@ -701,7 +722,7 @@ class Player {
 
     draw(ctx, camera ) {
         this.sprite.update();
-        this.sprite.draw(ctx, camera);
+        this.sprite.draw(ctx, camera,{flip:!this.facingRight});
         //ctx.fillRect(this.shape.position.x-camera.position.x,this.shape.position.y-camera.position.y,this.shape.width,this.shape.height);
     }
 
@@ -746,7 +767,7 @@ class Player {
                 this.onGround = false;
 
                 const jumpSound = SOUND_MAP.get('jump');
-                jumpSound.currentTime = 0;
+                //jumpSound.currentTime = 0;
                 jumpSound.play();
             }
 
