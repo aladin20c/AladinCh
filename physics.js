@@ -1016,8 +1016,6 @@ class TriggerZone extends StaticObject{
 
 
 
-
-
 //--------------------------------------------------------------
 //--------------------------------------------------------------
 //--------------------------------------------------------------
@@ -1038,7 +1036,6 @@ function setUpControls(){
         KEYS.set(event.key, false);
     });
 }
-
 
 function setupTouchControls() {
     const leftZone = document.getElementById('touch-left');
@@ -1068,8 +1065,6 @@ function setupTouchControls() {
     jumpZone.addEventListener('touchend', e => deactivate(jumpZone, 'up'));
     jumpZone.addEventListener('touchcancel', e => deactivate(jumpZone, 'up'));
 }
-
-
 
 function loadSounds() {
     console.log("loading sounds ...");
@@ -1541,4 +1536,3 @@ function gameLoop() {
     }
 
 }
-
