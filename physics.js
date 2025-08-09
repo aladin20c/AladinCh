@@ -1392,7 +1392,7 @@ function buildWorld(){
             description:'Internship experience involved assisting in the analysis of satellite imagery and contributing to web programming tasks.'
         },
         {
-            job:'Student Ambassador and Counselor',
+            job:'Student Ambassador',
             duration:'2022-2023, Paris',
             description:'worker for Paris Cité university and provided guidance and support to students during university open days, fairs and visits.'
         },
