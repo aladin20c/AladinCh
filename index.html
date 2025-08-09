@@ -35,9 +35,24 @@
         <img id="sprite" src="assets/sprite.png" alt="layer" >
       </div>
 
+      <div id="sounds">
+        <audio id="jump" src="sound/jump.wav" preload="auto"></audio>
+        <audio id="footsteps" src="sound/footsteps.wav" preload="auto"></audio>
+        <audio id="hello" src="sound/hello.wav" preload="auto"></audio>
+        <audio id="earthquake" src="sound/earthquake.mp3" preload="auto"></audio>
+      </div>
+
 
       <div id="canvas-container">
         <canvas id="canvas"></canvas>
+
+        <div id="touch-controls">
+          <div id="touch-jump" class="touch-zone">▲</div>
+          <div id="move-buttons">
+            <div id="touch-left" class="touch-zone">◀︎</div>
+            <div id="touch-right" class="touch-zone">▶︎</div>
+          </div>
+        </div>
 
         <div id="loading-screen">
           <div class="spinner"></div>

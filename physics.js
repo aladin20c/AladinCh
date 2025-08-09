@@ -3,7 +3,10 @@
 //--------------------------------------------------------------
 let IMAGES_LOADED = false;
 const IMAGE_MAP = new Map();
+const SOUND_MAP = new Map();
+
 const KEYS = new Map();
+const TOUCHES = new Map();
 const CANVAS_WIDTH = 1024;
 const CANVAS_HEIGHT = 650;
 const GRAVITY=0.7;
@@ -16,6 +19,23 @@ let PLAYER = null;
 let CAMERA = null;
 const PLAYER_INDEX = 10;
 
+
+//easing functions
+//(t => t * t); // Ease-in (slow start)
+
+//Linear
+function linearEasing(t){return t;}
+
+// // Ease-out
+function pow2Easing(t){
+    return 1 - Math.pow(1 - t, 2);
+}
+
+// Ease-out
+function expEasing(pow,t){
+    return 1 - Math.exp(-1 * pow * t);
+}
+
 function getImage(imageId){
     if(IMAGES_LOADED){
         const image = IMAGE_MAP.get(imageId);
@@ -25,7 +45,6 @@ function getImage(imageId){
     console.warn(`Images not loaded yet`);
     return null;
 }
-
 
 //--------------------------------------------------------------
 // Vector Class
@@ -256,7 +275,6 @@ class AABB {
         return resolution;
     }
 
-
     // Get the center point of the AABB
     getCenter() {
         return new Vector(
@@ -325,10 +343,6 @@ class Pea {
             this.children.length = 0;
         }
     }
-
-    intersectsWithCamera(camera) {
-        return camera.shape.containsPoint(this.position);
-    }
 }
 
 
@@ -355,10 +369,6 @@ class Sprite extends Pea {
             this.width,
             this.height
         );
-    }
-
-    intersectsWithCamera(camera) {
-        return camera.shape.intersectsRaw(this.position.x,this.position.y,this.width,this.height);
     }
 }
 
@@ -409,9 +419,6 @@ class ParallaxLayer extends Sprite {
         }
     }
 
-    intersectsWithCamera(camera) {
-        return true;
-    }
 }
 
 
@@ -475,9 +482,6 @@ class SpriteAnimation extends Sprite {
         );
     }
 
-    intersectsWithCamera(camera) {
-        camera.shape.intersectsRaw(this.position.x,this.position.y,this.frameWidth,this.frameHeight);
-    }
 }
 
 
@@ -550,6 +554,117 @@ class Banner extends Pea{
         ctx.restore();
     }
 }
+
+
+class Banner2 extends Pea {
+    constructor(
+        position = new Vector(),
+        zIndexDraw,
+        zIndexCollision,
+        {
+            job = 'Senior Game Developer',
+            duration = '2018 – Present',
+            description = 'Led the design and development of high-performance 2D/3D game engines across multiple platforms.',
+            fontJob = 'Impact',
+            fontDuration = 'Courier New',
+            fontDescription = 'Garamond',
+            fontSizeJob = 28,
+            fontSizeDuration = 20,
+            fontSizeDescription = 16,
+            textColor = '#FFFFFF',
+            backgroundColor = '#000000',
+            width = 435,
+            height = 180,
+            padding = 20
+        } = {}
+    ) {
+        super(position, zIndexDraw, zIndexCollision);
+
+        this.job = job;
+        this.duration = duration;
+        this.description = description;
+
+        this.fontJob = fontJob;
+        this.fontDuration = fontDuration;
+        this.fontDescription = fontDescription;
+
+        this.fontSizeJob = fontSizeJob;
+        this.fontSizeDuration = fontSizeDuration;
+        this.fontSizeDescription = fontSizeDescription;
+
+        this.textColor = textColor;
+        this.backgroundColor = backgroundColor;
+
+        this.width = width;
+        this.height = height;
+        this.padding = padding;
+
+        this.visible = true;
+    }
+
+    wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+        let currentY = y;
+
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = ctx.measureText(testLine);
+            const testWidth = metrics.width;
+
+            if (testWidth > maxWidth && n > 0) {
+                ctx.fillText(line, x, currentY);
+                line = words[n] + ' ';
+                currentY += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        ctx.fillText(line, x, currentY);
+    }
+
+    update() {
+        // Can add animation or visibility logic here if needed
+    }
+
+    draw(ctx, camera) {
+        if (!this.visible || !camera.shape.intersectsRaw(this.position.x, this.position.y, this.width, this.height)) return;
+
+        const drawX = this.position.x - camera.position.x;
+        const drawY = this.position.y - camera.position.y;
+
+        ctx.save();
+
+        // Draw background
+        ctx.fillStyle = this.backgroundColor;
+        ctx.fillRect(drawX, drawY, this.width, this.height);
+
+        ctx.strokeStyle = '#888888'; // or any grey color
+        ctx.lineWidth = 5; // optional: thickness of the border
+        ctx.strokeRect(drawX, drawY, this.width, this.height);
+
+        ctx.fillStyle = this.textColor;
+
+        // === Job Title ===
+        ctx.font = `${this.fontSizeJob}px ${this.fontJob}`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(this.job, drawX + this.padding, drawY + this.padding);
+
+        // === Duration ===
+        const durationY = drawY + this.padding + this.fontSizeJob + 8;
+        ctx.font = `${this.fontSizeDuration}px ${this.fontDuration}`;
+        ctx.fillText(this.duration, drawX + this.padding, durationY);
+
+        // === Description ===
+        const descriptionY = durationY + this.fontSizeDuration + 12;
+        ctx.font = `${this.fontSizeDescription}px ${this.fontDescription}`;
+        this.wrapText(ctx, this.description, drawX + this.padding, descriptionY, this.width - this.padding * 2, this.fontSizeDescription + 6);
+
+        ctx.restore();
+    }
+}
+
+
 //--------------------------------------------------------------
 //Player class
 //--------------------------------------------------------------
@@ -563,7 +678,7 @@ class Player {
         this.velocity = new Vector(0, 0);
 
         //sprite
-        this.sprite = new SpriteAnimation("sprite", this.position, this.zIndexDraw,this.zIndexDraw, 110, 175, 4);
+        this.sprite = new SpriteAnimation("sprite", this.position, this.zIndexDraw,this.zIndexDraw, 110, 175, 8);
         this.sprite.addState("idle", 0, 4);
         this.sprite.addState("running", 1, 4);
         this.sprite.addState("jumping", 2, 4);
@@ -599,9 +714,9 @@ class Player {
 
     update() {
         const keysPressed = {
-            left: KEYS.get('ArrowLeft'),
-            right: KEYS.get('ArrowRight'),
-            jump: KEYS.get('ArrowUp'),
+            left: KEYS.get('ArrowLeft') || TOUCHES.get('left'),
+            right: KEYS.get('ArrowRight') || TOUCHES.get('right'),
+            jump: KEYS.get('ArrowUp') || TOUCHES.get('up'),
         };
 
         // ----------------
@@ -629,6 +744,10 @@ class Player {
                 this.isJumping = true;
                 this.jumpTimer = 0;
                 this.onGround = false;
+
+                const jumpSound = SOUND_MAP.get('jump');
+                jumpSound.currentTime = 0;
+                jumpSound.play();
             }
 
             if (this.isJumping && this.jumpTimer < this.maxJumpTime) {
@@ -668,6 +787,9 @@ class Player {
                         this.onGround = true;
                         this.velocity.y = 0;
                         this.isJumping = false;
+                    }else if (resolution.y > 0){
+                        this.jumpTimer = this.maxJumpTime;
+                        this.velocity.y = 0;
                     }
 
                     // Optional: stop horizontal velocity on side collisions
@@ -679,28 +801,40 @@ class Player {
         }
 
 
-        this.determineState();
-    }
+        const state = this.determineState();
+        const footstepsSound = SOUND_MAP.get('footsteps');
+        if (state === 'running') {
+            if (footstepsSound.paused) {
+                footstepsSound.currentTime = 0;
+                footstepsSound.play();
+            }
+        } else {
+            if (!footstepsSound.paused) { // only stop if currently playing
+                footstepsSound.pause();
+                footstepsSound.currentTime = 0;
+            }
+        }
 
-    intersectsWithCamera(camera) {
-        return true;
     }
-
 
 
     determineState() {
-        if (!this.sprite) return;
+        if (!this.sprite) return '';
 
         if (!this.onGround) {
             if (this.velocity.y < 0) {
                 this.sprite.setState("jumping");
+                return 'jumping';
             } else {
                 this.sprite.setState("falling");
+                return 'falling';
             }
         } else if (Math.abs(this.velocity.x) > 0.4) {
             this.sprite.setState("running");
+            return 'running';
         } else {
             this.sprite.setState("idle");
+            return 'idle';
         }
     }
 
@@ -721,22 +855,14 @@ class Camera {
         this.target = null;
         this.followSpeedX = 0.1; // 0 = no follow, 1 = instant snap
         this.followSpeedY = 0.1; // 0 = no follow, 1 = instant snap
-        this.easingFunctionX = (t) => t; // Default: linear easing
-        this.easingFunctionY = (t) => t; // Default: linear easing
+        this.easingFunctionX = linearEasing; // Default: linear easing
+        this.easingFunctionY = linearEasing; // Default: linear easing
         this.followX = true;
         this.followY = true;
         this.bounds = null; //{minX:-10000,minY:-10000,maxX:10000,maxY:10000};
     }
 
-
-    //(t => t); // Linear
-    //(t => t * t); // Ease-in (slow start)
-    //(t => 1 - Math.pow(1 - t, 2)); // Ease-out
     setTarget(target){this.target = target;}
-    setEasingFunctionX(fn) {this.easingFunctionX = fn;}
-    setEasingFunctionY(fn) {this.easingFunctionY = fn;}
-    setFollowSpeedX(speed) {this.followSpeedX = Math.max(0, Math.min(1, speed));}
-    setFollowSpeedY(speed) {this.followSpeedY = Math.max(0, Math.min(1, speed));}
     setBounds(bounds) {this.bounds = bounds;}
 
     shake(){
@@ -913,6 +1039,82 @@ function setUpControls(){
     });
 }
 
+
+function setupTouchControls() {
+    const leftZone = document.getElementById('touch-left');
+    const rightZone = document.getElementById('touch-right');
+    const jumpZone = document.getElementById('touch-jump');
+
+    function activate(zone, key) {
+        zone.classList.add('active');
+        TOUCHES.set(key,true);
+    }
+    function deactivate(zone, key) {
+        zone.classList.remove('active');
+        TOUCHES.set(key,false);
+    }
+
+    // Left zone controls left/right movement by dividing it in half horizontally
+    leftZone.addEventListener('touchstart', e => activate(leftZone, 'left'));
+    leftZone.addEventListener('touchend', e => deactivate(leftZone, 'left') );
+    leftZone.addEventListener('touchcancel', e => deactivate(leftZone, 'left'));
+
+    rightZone.addEventListener('touchstart', e => activate(rightZone, 'right'));
+    rightZone.addEventListener('touchend', e => deactivate(rightZone, 'right'));
+    rightZone.addEventListener('touchcancel', e => deactivate(rightZone, 'right'));
+
+    // Right zone controls jump
+    jumpZone.addEventListener('touchstart', e => activate(jumpZone, 'up'));
+    jumpZone.addEventListener('touchend', e => deactivate(jumpZone, 'up'));
+    jumpZone.addEventListener('touchcancel', e => deactivate(jumpZone, 'up'));
+}
+
+
+
+function loadSounds() {
+    console.log("loading sounds ...");
+    return new Promise((resolve) => {
+        const container = document.getElementById('sounds');
+        if (!container) {
+            console.warn(`Container with ID "sounds" not found.`);
+            resolve();
+            return;
+        }
+
+        const songs = container.querySelectorAll('audio[id]');
+        const totalSongs = songs.length;
+        if (totalSongs === 0) {
+            resolve();
+            return;
+        }
+
+        let loadedCount = 0;
+
+        const checkAllLoaded = () => {
+            loadedCount++;
+            if (loadedCount === totalSongs) {
+                resolve();
+            }
+        };
+
+        songs.forEach(audio => {
+            const id = audio.id;
+            SOUND_MAP.set(id, audio);
+
+            // If metadata is already loaded
+            if (audio.readyState >= 4) { // HAVE_ENOUGH_DATA
+                checkAllLoaded();
+            } else {
+                audio.addEventListener('canplaythrough', checkAllLoaded, { once: true });
+                audio.addEventListener('error', () => {
+                    console.warn(`Failed to load audio with ID "${id}"`);
+                    checkAllLoaded();
+                }, { once: true });
+            }
+        });
+    });
+}
+
 function loadImages() {
     console.log('loading images ...');
     return new Promise((resolve) => {
@@ -949,18 +1151,15 @@ function loadImages() {
                 // Already loaded
                 checkAllLoaded();
             } else {
-                img.addEventListener('load', checkAllLoaded);
+                img.addEventListener('load', checkAllLoaded,{ once: true });
                 img.addEventListener('error', () => {
                     console.warn(`Failed to load image with ID "${id}"`);
                     checkAllLoaded();
-                });
+                },{ once: true });
             }
         });
     });
 }
-
-
-
 
 function buildArrows(){
 
@@ -979,8 +1178,7 @@ function buildArrows(){
         const arSprite = new Sprite(arrows[i],ar.position,PLAYER_INDEX+1,PLAYER_INDEX+1);
         ar.add(arSprite);
 
-        //t => (1 - Math.exp(-10 * t)) / (1 - Math.exp(-10))
-        ar.setEasing((t => 1 - Math.exp(-6 * t)));
+        ar.setEasing(t => expEasing(6,t));
         ar.setDuration(duration[i]);
 
         DRAW_OBJECTS.push(arSprite);
@@ -989,14 +1187,13 @@ function buildArrows(){
     }
 }
 
-
 function buildWorld(){
     console.log('building world ...');
 
     PLAYER = new Player();
     CAMERA = new Camera();
     CAMERA.setTarget(PLAYER.cameraTarget);
-    CAMERA.setBounds({minX:-100,minY:410,maxX:50000,maxY:1130});
+    CAMERA.setBounds({minX:-100,minY:410,maxX:12000,maxY:1130});
 
     const layer0 = new ParallaxLayer("layer0",new Vector(0,-200),0,0,0.1,0.1,true,false);
     const layer1 = new ParallaxLayer("layer1",new Vector(0,390),1,1,0.2,0.2,true,false);
@@ -1012,6 +1209,17 @@ function buildWorld(){
     const ground = new StaticObject(new Vector(-1000,1000),PLAYER_INDEX+1,PLAYER_INDEX,null);
     ground.setShape(new AABB(ground.position,50000,500));
     COLLISION_OBJECTS.push(ground);
+
+
+    const leftLimiter = new StaticObject(new Vector(-250,0),PLAYER_INDEX+1,PLAYER_INDEX,null);
+    leftLimiter.setShape(new AABB(leftLimiter.position,100,1500));
+    COLLISION_OBJECTS.push(leftLimiter);
+
+    const rightLimiter = new StaticObject(new Vector(12000,0),PLAYER_INDEX+1,PLAYER_INDEX,null);
+    rightLimiter.setShape(new AABB(rightLimiter.position,100,1500));
+    COLLISION_OBJECTS.push(rightLimiter);
+
+    //build arrows
     buildArrows();
 
     //building Door
@@ -1034,7 +1242,7 @@ function buildWorld(){
         return arc.endPosition.manhattanDistance(PLAYER.position) < 500;
     };
     arc.setDuration(0.5);
-    arc.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    arc.setEasing(pow2Easing);
     UPDATE_OBJECTS.push(arc);
     DRAW_OBJECTS.push(arcSprite);
 
@@ -1045,7 +1253,7 @@ function buildWorld(){
     const eiffelSprite = new Sprite('eiffel',eiffel.position,PLAYER_INDEX-1, PLAYER_INDEX-1);
     eiffel.add(eiffelSprite);
     eiffel.setDuration(0.5);
-    eiffel.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    eiffel.setEasing(pow2Easing);
     eiffel.shouldActivate = function() {
         return arc.isDone()  ;
     };
@@ -1057,7 +1265,7 @@ function buildWorld(){
     const notre_dameSprite = new Sprite('notre_dame',notre_dame.position,PLAYER_INDEX-1, PLAYER_INDEX-1);
     notre_dame.add(notre_dameSprite);
     notre_dame.setDuration(0.5);
-    notre_dame.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    notre_dame.setEasing(pow2Easing);
     notre_dame.shouldActivate = function() {
         return eiffel.isDone()  ;
     };
@@ -1075,7 +1283,7 @@ function buildWorld(){
         return polytech.endPosition.manhattanDistance(PLAYER.position) < 400;
     };
     polytech.setDuration(4);
-    polytech.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    polytech.setEasing(pow2Easing);
     UPDATE_OBJECTS.push(polytech);
     DRAW_OBJECTS.push(polytechSprite);
 
@@ -1088,6 +1296,8 @@ function buildWorld(){
     DRAW_OBJECTS.push(music_animation);
 
 
+
+    //building banners
     const banner0 = new Banner( new Vector(90,600),PLAYER_INDEX-2,PLAYER_INDEX-2,
         {
         text: 'Press arrows to scroll through my resume',
@@ -1127,10 +1337,19 @@ function buildWorld(){
     DRAW_OBJECTS.push(bannerMusic);
 
 
+    //shaking camera
     const trigger1 = new TriggerZone(new Vector(2100,500),PLAYER_INDEX,PLAYER_INDEX,null,null);
-    trigger1.setShape(new AABB(trigger1.position,400,1000));
+    trigger1.setShape(new AABB(trigger1.position,1500,1000));
+    const es = SOUND_MAP.get('earthquake');
     trigger1.trigger = function () {
-        return polytech.active;
+        if (polytech.active && PLAYER.shape.intersects(this.shape)){
+            es.volume = 1;
+            if (es.paused) es.play();
+            return true;
+        }else{
+            es.volume = 0;
+            return false;
+        }
     };
     trigger1.triggerFunction = function () {
         CAMERA.shake();
@@ -1139,7 +1358,26 @@ function buildWorld(){
 
 
 
+    const trigger2 = new TriggerZone(new Vector(3900,500),PLAYER_INDEX,PLAYER_INDEX,null,null);
+    trigger2.setShape(new AABB(trigger2.position,200,700));
+    const gs = SOUND_MAP.get('hello');
+    let playerIn = false;
+    trigger2.trigger = function () {
+        if (PLAYER.shape.intersects(this.shape)){
+            if (!playerIn && gs.paused) gs.play();
+            playerIn = true;
+            return true;
+        }else{
+            playerIn = false;
+            return false;
+        }
+    };
 
+    trigger2.triggerFunction = function () {};
+    UPDATE_OBJECTS.push(trigger2);
+
+
+    //building porte 2
     const porte2 = new StaticObject(new Vector(4500,664),PLAYER_INDEX,PLAYER_INDEX,null);
     porte2.setShape(new AABB(porte2.position.clone().add(107,35)  ,47,90));
     const porte2Sprite1 = new Sprite('porte01',porte2.position,PLAYER_INDEX-1,PLAYER_INDEX-1);
@@ -1150,28 +1388,131 @@ function buildWorld(){
     DRAW_OBJECTS.push(porte2Sprite1);
     DRAW_OBJECTS.push(porte2Sprite2);
 
-    const satellite = new MovingObject(new Vector(6000,200), new Vector(6000,520), PLAYER_INDEX-1, PLAYER_INDEX-1);
-    const satelliteSprite = new SpriteAnimation('satellite', satellite.position, PLAYER_INDEX-1,PLAYER_INDEX-1, 150, 150,  6);
+
+    //building experience banners
+    const experienceBanners = [
+        {
+            job:'Intern at Seabex',
+            duration:'August 2022, Orléans',
+            description:'Internship experience involved assisting in the analysis of satellite imagery and contributing to web programming tasks.'
+        },
+        {
+            job:'Student Ambassador and Counselor',
+            duration:'2022-2023, Paris',
+            description:'worker for Paris Cité university and provided guidance and support to students during university open days, fairs and visits.'
+        },
+        {
+            job:'Game Design Summer school',
+            duration:'August 2023, Finland',
+            description:'Game Design & Game development summer school at the university of Turku'
+        },
+        {
+            job:'software dev. Intern, SMABTP',
+            duration:'Summer 2024, Paris',
+            description:'Software developing internship involving Front End Programming, in Angular and Back End programming in Spring Boot'
+        },
+        {
+            job:'Academic Tutor',
+            duration:'2024-2025, Orsay',
+            description:'Student tutor for first year student at polytech Paris Saclay, in Mathematics, Physics and computer science'
+        },
+        {
+            job:'Full-Stack Junior Dev, Ouidou',
+            duration:'summer 2025, Paris',
+            description:'worked with several teams on different projects, in development, optimisation, maintenance and migration'
+        },
+    ];
+
+    for (let i=0; i<experienceBanners.length;i++){
+        const experience = new Banner2(new Vector((5+i)*1000, 600), PLAYER_INDEX-2, PLAYER_INDEX-2);
+        experience.job= experienceBanners[i].job;
+        experience.duration=  experienceBanners[i].duration;
+        experience.description=  experienceBanners[i].description;
+        DRAW_OBJECTS.push(experience);
+    }
+
+
+
+
+    //satellite
+    const satellite = new MovingObject(new Vector(5000,200), new Vector(5350,500), PLAYER_INDEX-1, PLAYER_INDEX-1);
+    const satelliteSprite = new SpriteAnimation('satellite', satellite.position, PLAYER_INDEX-1,PLAYER_INDEX-1, 150, 150,  8);
     satelliteSprite.addState("animation", 0, 8);
     satelliteSprite.setState("animation");
     satellite.add(satelliteSprite);
     satellite.setDuration(2);
-
-    satellite.setEasing((t => 1 - Math.pow(1 - t, 2)));
+    satellite.setEasing(pow2Easing);
     satellite.shouldActivate = function() {
-        return satellite.endPosition.manhattanDistance(PLAYER.position) < 500;
+        return satellite.endPosition.distanceTo2(PLAYER.position) < 490000;
     };
     UPDATE_OBJECTS.push(satellite);
     UPDATE_OBJECTS.push(satelliteSprite);
     DRAW_OBJECTS.push(satelliteSprite);
 
 
-        /*
-        var paris_cite = new SpriteShow('paris_cite',7245,0,7245,400,0.03);
-        var gameB = new SpriteShowAnimation('gameB',8500,0,8500,400,0.03, 183,300,10,4);
-        var smabtp = new SpriteShow('smabtp',9850,100,9850,450,0.03);
-        var polytechlogo = new SpriteShow('polytechlogo',11150,0,11150,450,0.03);
-        */
+    //paris_cite
+    const paris_cite = new MovingObject(new Vector(6430,200), new Vector(6430,530), PLAYER_INDEX, PLAYER_INDEX);
+    const paris_citeSprite = new Sprite('paris_cite', paris_cite.position, PLAYER_INDEX-1,PLAYER_INDEX-1);
+    paris_cite.setShape(new AABB(paris_cite.position,paris_citeSprite.width,paris_citeSprite.height));
+    paris_cite.add(paris_citeSprite);
+    paris_cite.setDuration(2);
+    paris_cite.setEasing(pow2Easing);
+    paris_cite.shouldActivate = function() {
+        return paris_cite.endPosition.distanceTo2(PLAYER.position) < 490000;
+    };
+    UPDATE_OBJECTS.push(paris_cite);
+    COLLISION_OBJECTS.push(paris_cite);
+    DRAW_OBJECTS.push(paris_citeSprite);
+
+    //gameDesign
+    const gameDesign = new MovingObject(new Vector(7430,200), new Vector(7430,500), PLAYER_INDEX, PLAYER_INDEX);
+    const gameDesignSprite = new SpriteAnimation('gameBoy', gameDesign.position, PLAYER_INDEX+1,PLAYER_INDEX+1, 183, 300,  8);
+    gameDesign.setShape(new AABB(gameDesign.position,gameDesignSprite.frameWidth,gameDesignSprite.frameHeight));
+    gameDesignSprite.addState("animation", 0, 4);
+    gameDesignSprite.setState("animation");
+    gameDesign.add(gameDesignSprite);
+    gameDesign.setDuration(2);
+    gameDesign.setEasing(pow2Easing);
+    gameDesign.shouldActivate = function() {
+        return gameDesign.endPosition.distanceTo2(PLAYER.position) < 490000;
+    };
+    UPDATE_OBJECTS.push(gameDesign);
+    COLLISION_OBJECTS.push(gameDesign);
+    UPDATE_OBJECTS.push(gameDesignSprite);
+    DRAW_OBJECTS.push(gameDesignSprite);
+
+
+    //sma btp
+    const smabtp = new MovingObject(new Vector(8400,200), new Vector(8400,550), PLAYER_INDEX-1, PLAYER_INDEX-1);
+    const smabtpSprite = new Sprite('smabtp', smabtp.position, PLAYER_INDEX-1,PLAYER_INDEX-1);
+    smabtp.add(smabtpSprite);
+    smabtp.setDuration(2);
+    smabtp.setEasing(pow2Easing);
+    smabtp.shouldActivate = function() {
+        return smabtp.endPosition.distanceTo2(PLAYER.position) < 490000;
+    };
+    UPDATE_OBJECTS.push(smabtp);
+    DRAW_OBJECTS.push(smabtpSprite);
+
+
+
+    //polytech
+    const polytech_logo = new MovingObject(new Vector(9430,200), new Vector(9430,800), PLAYER_INDEX, PLAYER_INDEX);
+    const polytech_logoSprite = new Sprite('polytech_logo', polytech_logo.position, PLAYER_INDEX-1,PLAYER_INDEX-1);
+    polytech_logo.setShape(new AABB(polytech_logo.position,polytech_logoSprite.width,polytech_logoSprite.height));
+    polytech_logo.add(polytech_logoSprite);
+    polytech_logo.setDuration(2);
+    polytech_logo.setEasing(pow2Easing);
+    polytech_logo.shouldActivate = function() {
+        return polytech_logo.endPosition.distanceTo2(PLAYER.position) < 490000;
+    };
+    UPDATE_OBJECTS.push(polytech_logo);
+    COLLISION_OBJECTS.push(polytech_logo);
+    DRAW_OBJECTS.push(polytech_logoSprite);
+
+
+    //ouidou
+
 
 
     // Sort by zIndex ascending (lower zIndex = drawn first)
@@ -1180,8 +1521,6 @@ function buildWorld(){
     UPDATE_OBJECTS.sort((a, b) => a.zIndexCollision - b.zIndexCollision);
 
 }
-
-
 
 function gameLoop() {
     // --- UPDATE ---
