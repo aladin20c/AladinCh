@@ -53,8 +53,8 @@ loadImages()
       console.log('sounds are loaded');
       preloadAudio('jump');
       SOUND_MAP.get('footsteps').loop = true;
-      SOUND_MAP.get('footsteps').volume = 0.5;
-      SOUND_MAP.get('jump').volume = 0.5;
+      SOUND_MAP.get('footsteps').volume = 0.7;
+      SOUND_MAP.get('jump').volume = 0.6;
       SOUND_MAP.get('hello').volume = 0.3;
 
       buildWorld();

@@ -14,19 +14,46 @@ img {
     display: none;
 }
 
-#canvas-container {
+#main-container {
     background-color: #e8e8e8 ;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%,-50%);
-    max-width: 100vw !important;
-    max-height: 100vh !important;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+#canvas-container {
+    display: block;
+    position: relative;
+    height: 90%; /* default */
+    width: auto;  /* default */
+}
+
+/* When height > width (portrait) */
+@media (max-aspect-ratio: 1/1) {
+    #canvas-container {
+        width: 90%;
+        height: auto;
+    }
+}
+
+/* When width >= height (landscape) */
+@media (min-aspect-ratio: 1/1) {
+    #canvas-container {
+        height: 90%;
+        width: auto;
+    }
+}
 
 canvas {
     display: block;
+    max-height: 100%;
+    max-width: 100%;
 }
 
 /* Loading screen overlay — only covers canvas */
@@ -35,7 +62,6 @@ canvas {
     top: 0; left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(250, 250, 250, 0.95); /* Soft light overlay */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -86,7 +112,7 @@ canvas {
 
 
 #touch-controls {
-    position: fixed;
+    position: absolute;
     bottom: 10px;
     left: 10px;
     right: 10px;
@@ -112,7 +138,6 @@ canvas {
     align-items: center;
     transition: background-color 0.2s;
     margin: 0 5px;
-
 
     user-select: none;
     -webkit-user-select: none;

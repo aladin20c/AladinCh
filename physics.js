@@ -725,7 +725,6 @@ class Player {
     draw(ctx, camera ) {
         this.sprite.update();
         this.sprite.draw(ctx, camera,{flip:!this.facingRight});
-        //ctx.fillRect(this.shape.position.x-camera.position.x,this.shape.position.y-camera.position.y,this.shape.width,this.shape.height);
     }
 
     translate(vector){
@@ -1022,11 +1021,12 @@ class TriggerZone extends StaticObject{
     }
 
     trigger(){
-        //if (this.shape) return this.shape.intersects(player.shape);
         return true;
     };
 
-    triggerFunction(){}
+    triggerFunction(){
+        return;
+    }
 
     update() {
         if (this.trigger()){
